@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="180" viewBox="0 0 800 180">
+  <rect width="800" height="180" rx="6" fill="#0a0a0a"/>
+  <text x="400" y="48" text-anchor="middle" font-family="'SF Mono', 'Fira Code', monospace" font-size="34" font-weight="700" fill="#ffffff" letter-spacing="8">uSEID</text>
+  <text x="400" y="74" text-anchor="middle" font-family="'Inter', 'Helvetica Neue', sans-serif" font-size="12" fill="#71717a" letter-spacing="3">UNIVERSAL SEMANTIC ELEMENT ID</text>
+  <!-- Flow -->
+  <rect x="108" y="100" width="100" height="30" rx="4" fill="none" stroke="#27272a" stroke-width="1"/>
+  <text x="158" y="120" text-anchor="middle" font-family="monospace" font-size="11" fill="#a1a1aa">snapshot</text>
+  <text x="222" y="120" font-family="monospace" font-size="12" fill="#27272a">→</text>
+  <rect x="236" y="100" width="90" height="30" rx="4" fill="none" stroke="#27272a" stroke-width="1"/>
+  <text x="281" y="120" text-anchor="middle" font-family="monospace" font-size="11" fill="#a1a1aa">extract</text>
+  <text x="340" y="120" font-family="monospace" font-size="12" fill="#27272a">→</text>
+  <rect x="354" y="100" width="80" height="30" rx="4" fill="none" stroke="#27272a" stroke-width="1"/>
+  <text x="394" y="120" text-anchor="middle" font-family="monospace" font-size="11" fill="#a1a1aa">score</text>
+  <text x="448" y="120" font-family="monospace" font-size="12" fill="#27272a">→</text>
+  <rect x="462" y="100" width="80" height="30" rx="4" fill="none" stroke="#27272a" stroke-width="1"/>
+  <text x="502" y="120" text-anchor="middle" font-family="monospace" font-size="11" fill="#a1a1aa">safety</text>
+  <text x="556" y="120" font-family="monospace" font-size="12" fill="#27272a">→</text>
+  <rect x="570" y="100" width="110" height="30" rx="15" fill="none" stroke="#27272a" stroke-width="1"/>
+  <text x="625" y="120" text-anchor="middle" font-family="monospace" font-size="11" fill="#a1a1aa">match | abstain</text>
+  <text x="400" y="160" text-anchor="middle" font-family="'Inter', 'Helvetica Neue', sans-serif" font-size="11" fill="#3f3f46">stable identity — never acts on the wrong element</text>
+</svg>

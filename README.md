@@ -1,4 +1,13 @@
-# uSEID
+<p align="center">
+  <img src="assets/banner.svg" alt="uSEID — Universal Semantic Element ID" width="800" />
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@pyyush/useid"><img src="https://img.shields.io/npm/v/@pyyush/useid?color=111&label=npm" alt="npm version" /></a>
+  <a href="https://github.com/pyyush/useid/actions/workflows/ci.yml"><img src="https://github.com/pyyush/useid/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-111" alt="License" /></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D20-111" alt="Node >= 20" />
+</p>
 
 **Your selectors break. uSEID doesn't.**
 
