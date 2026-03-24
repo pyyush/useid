@@ -30,7 +30,7 @@ uSEID builds a **portable signature** from three signals:
 ## Install
 
 ```bash
-npm install useid
+npm install @pyyush/useid
 ```
 
 Zero config. One dependency (zod). Works with any Node.js 20+ project.
@@ -38,7 +38,7 @@ Zero config. One dependency (zod). Works with any Node.js 20+ project.
 ## Quick Start
 
 ```typescript
-import { buildUSEID, resolveUSEID } from "useid";
+import { buildUSEID, resolveUSEID } from "@pyyush/useid";
 
 // Capture snapshots from your browser automation tool
 const domSnapshot = {
@@ -118,7 +118,7 @@ resolveUSEID({
 Element signatures can contain accessible names from form labels. For logging or storage:
 
 ```typescript
-import { redactUSEID } from "useid";
+import { redactUSEID } from "@pyyush/useid";
 
 const safe = redactUSEID(signature);
 // accessible names → hashed, sibling tokens → stripped, form labels → removed
