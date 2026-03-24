@@ -53,7 +53,9 @@ export function tokenize(text: string): string[] {
 
 /**
  * Compute the Jaccard similarity between two string arrays.
- * Returns 0 if both are empty, 1 if identical.
+ * Returns 1 if identical, 0 if disjoint.
+ * Two empty arrays return 1 (no context = context matches — avoids penalizing
+ * elements that both lack sibling/ancestor data).
  */
 export function jaccardSimilarity(a: string[], b: string[]): number {
   if (a.length === 0 && b.length === 0) return 1;

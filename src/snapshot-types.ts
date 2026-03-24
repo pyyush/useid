@@ -25,11 +25,3 @@ export interface AccessibilitySnapshotResult {
   /** Optional canonical JSON string */
   serialized?: string;
 }
-
-/** Screenshot input (unused by uSEID v1, reserved for future visual anchoring). */
-export interface ScreenshotResult {
-  /** Image buffer */
-  buffer: Buffer;
-  /** Optional hash */
-  hash?: string;
-}

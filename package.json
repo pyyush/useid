@@ -34,7 +34,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {

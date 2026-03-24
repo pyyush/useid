@@ -13,7 +13,6 @@ import type { NormalizedElement, SemanticRegion } from "./types.js";
 import { normalizeAccessibleName, normalizeRole, normalizeTag } from "./canonicalizer.js";
 import {
   LANDMARK_ROLE_MAP,
-  LANDMARK_TAG_MAP,
   MAX_ANCESTOR_LEVELS,
   MAX_SIBLING_TOKENS,
 } from "./constants.js";
@@ -88,8 +87,7 @@ export function extractElements(
     maxSiblings
   );
 
-  // Parse DOM snapshot for layout data
-  const layoutMap = extractLayoutMap(domSnapshot.snapshot as CDPDOMSnapshot | null);
+  // Parse DOM snapshot for layout and structural data
   const domStructure = extractDOMStructure(domSnapshot.snapshot as CDPDOMSnapshot | null);
 
   // Build normalized elements
@@ -106,7 +104,7 @@ export function extractElements(
     const normalizedName = normalizeAccessibleName(ax.name);
 
     // Find matching DOM node for spatial data
-    const domMatch = findDOMMatch(ax, domStructure, layoutMap);
+    const domMatch = findDOMMatch(ax, domStructure);
     const bbox = domMatch?.bounds ?? { x: 0, y: 0, w: 0, h: 0 };
 
     // Determine semantic region from ancestor roles
@@ -253,13 +251,6 @@ function extractDOMStructure(snapshot: CDPDOMSnapshot | null): DOMNodeInfo[] {
   return result;
 }
 
-function extractLayoutMap(
-  snapshot: CDPDOMSnapshot | null
-): Map<number, { x: number; y: number; w: number; h: number }> {
-  if (!snapshot?.documents?.[0]) return new Map();
-  return extractLayoutMapFromDoc(snapshot.documents[0]);
-}
-
 function extractLayoutMapFromDoc(
   doc: CDPDOMSnapshotDocument
 ): Map<number, { x: number; y: number; w: number; h: number }> {
@@ -282,7 +273,6 @@ function extractLayoutMapFromDoc(
 function findDOMMatch(
   ax: FlatAXElement,
   domNodes: DOMNodeInfo[],
-  _layoutMap: Map<number, { x: number; y: number; w: number; h: number }>
 ): DOMNodeInfo | undefined {
   if (domNodes.length === 0) return undefined;
 
@@ -330,8 +320,7 @@ const GENERIC_ROLES = new Set([
   "status",
 ]);
 function isGenericRole(role: string): boolean {
-  const generic = GENERIC_ROLES;
-  return generic.has(role.toLowerCase());
+  return GENERIC_ROLES.has(role.toLowerCase());
 }
 
 const ROLE_TAG_MAP: Record<string, string> = {

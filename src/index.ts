@@ -2,7 +2,7 @@
 // Stable cross-run element identity via ARIA semantics + DOM structure + visual anchoring
 
 // Snapshot input types
-export type { DOMSnapshotResult, AccessibilitySnapshotResult, ScreenshotResult } from "./snapshot-types.js";
+export type { DOMSnapshotResult, AccessibilitySnapshotResult } from "./snapshot-types.js";
 
 // Types and schemas
 export {
@@ -42,7 +42,6 @@ export {
   MAX_SIBLING_TOKENS,
   USEID_VERSION,
   LANDMARK_ROLE_MAP,
-  LANDMARK_TAG_MAP,
 } from "./constants.js";
 
 // Canonicalizer

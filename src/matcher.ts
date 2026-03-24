@@ -78,15 +78,16 @@ function computeSemanticScore(sig: USEIDSignature, el: NormalizedElement): numbe
 
 /**
  * Structural score: ancestor chain Jaccard + sibling token overlap.
+ *
+ * Sub-weights are fixed (not configurable) because they reflect the relative
+ * information density of each structural signal:
+ * - Ancestor chain (0.6): strongest — uniquely locates an element in the DOM tree
+ * - Sibling tokens (0.3): moderate — disambiguates elements in the same container
+ * - Depth proximity (0.1): weak — only a rough positional hint, often noisy
  */
 function computeStructuralScore(sig: USEIDSignature, el: NormalizedElement): number {
-  // Ancestor role chain similarity (weight 0.6)
   const ancestorSim = jaccardSimilarity(sig.structure.ancestorRoles, el.ancestorRoles);
-
-  // Sibling token overlap (weight 0.3)
   const siblingSim = jaccardSimilarity(sig.structure.siblingTokens, el.siblingTokens);
-
-  // Depth proximity (weight 0.1)
   const depthDiff = Math.abs(sig.structure.domDepth - el.domDepth);
   const depthSim = 1 / (1 + depthDiff);
 

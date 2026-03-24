@@ -41,11 +41,3 @@ export const LANDMARK_ROLE_MAP: Record<string, string> = {
   complementary: "aside",
 };
 
-/** Landmark tags that map to semantic regions */
-export const LANDMARK_TAG_MAP: Record<string, string> = {
-  header: "header",
-  nav: "nav",
-  main: "main",
-  footer: "footer",
-  aside: "aside",
-};

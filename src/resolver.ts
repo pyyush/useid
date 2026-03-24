@@ -50,8 +50,9 @@ export function resolveUSEID(opts: ResolveUSEIDOptions): ResolveResult {
 }
 
 /**
- * Compare two uSEID signatures for similarity.
- * Returns a score from 0 (completely different) to 1 (identical).
+ * Compare two uSEID signatures for semantic identity.
+ * Returns 1 if identical (same hash), 0.5 if same binding + role but different name,
+ * 0 if different origin, page, or role. Does NOT compare structural/spatial features.
  */
 export function compareUSEID(a: USEIDSignature, b: USEIDSignature): number {
   // Fast path: identical hashes
