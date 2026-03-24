@@ -1,7 +1,7 @@
 // uSEID — Universal Semantic Element ID
 // Stable cross-run element identity via ARIA semantics + DOM structure + visual anchoring
 
-// Snapshot types (local definitions replacing DBAR dependency)
+// Snapshot input types
 export type { DOMSnapshotResult, AccessibilitySnapshotResult, ScreenshotResult } from "./snapshot-types.js";
 
 // Types and schemas

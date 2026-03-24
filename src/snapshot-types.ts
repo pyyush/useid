@@ -1,33 +1,35 @@
 /**
- * Snapshot types for uSEID input.
+ * Snapshot input types for uSEID.
+ *
  * These are intentionally minimal — any browser automation framework can produce
- * compatible snapshots. Originally derived from DBAR (Deterministic Browser Agent Runtime).
+ * compatible snapshots. Only `snapshot` and `tree` are used by uSEID; other
+ * fields are accepted for compatibility but ignored.
  */
 
-/** Result of a CDP DOM snapshot capture. */
+/** DOM snapshot input (e.g., from CDP DOMSnapshot.captureSnapshot). */
 export interface DOMSnapshotResult {
-  /** Raw CDP DOMSnapshot.captureSnapshot response */
+  /** Raw DOM snapshot response */
   snapshot: unknown;
-  /** SHA-256 hash of canonical JSON */
-  hash: string;
-  /** Canonical JSON string */
-  serialized: string;
+  /** Optional hash for determinism comparison */
+  hash?: string;
+  /** Optional canonical JSON string */
+  serialized?: string;
 }
 
-/** Result of an accessibility tree snapshot. */
+/** Accessibility tree snapshot input (e.g., from Playwright page.accessibility.snapshot()). */
 export interface AccessibilitySnapshotResult {
-  /** Accessibility tree (e.g., from Playwright page.accessibility.snapshot()) */
+  /** Accessibility tree */
   tree: unknown;
-  /** SHA-256 hash of canonical JSON */
-  hash: string;
-  /** Canonical JSON string */
-  serialized: string;
+  /** Optional hash for determinism comparison */
+  hash?: string;
+  /** Optional canonical JSON string */
+  serialized?: string;
 }
 
-/** Result of a page screenshot. */
+/** Screenshot input (unused by uSEID v1, reserved for future visual anchoring). */
 export interface ScreenshotResult {
-  /** PNG buffer */
+  /** Image buffer */
   buffer: Buffer;
-  /** SHA-256 hash */
-  hash: string;
+  /** Optional hash */
+  hash?: string;
 }
