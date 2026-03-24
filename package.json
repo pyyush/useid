@@ -45,6 +45,22 @@
     "typescript": "^5.7.0",
     "vitest": "^4.0.0"
   },
+  "keywords": [
+    "element-identity",
+    "browser-agent",
+    "accessibility",
+    "aria",
+    "selector",
+    "stable-ref",
+    "e2e",
+    "playwright",
+    "cdp",
+    "dom"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "engines": {
     "node": ">=20.0.0"
   }
