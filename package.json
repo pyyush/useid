@@ -1,6 +1,6 @@
 {
   "name": "@pyyush/useid",
-  "version": "0.2.0",
+  "version": "1.0.0-rc.1",
   "description": "uSEID - Universal Semantic Element ID for stable cross-run element identity",
   "author": "Piyush Vyas",
   "license": "Apache-2.0",
