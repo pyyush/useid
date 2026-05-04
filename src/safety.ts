@@ -83,34 +83,34 @@ export function applySafetyGate(
     return {
       resolved: false,
       candidates: [],
-      explanation: "No candidate elements found matching the signature role",
+      explanation: `No candidate elements found for role="${signature.semantic.role}" name="${signature.semantic.accessibleName}"`,
       abstentionReason: "no_candidates",
     };
   }
 
   const top = candidates[0]!;
+  const second = candidates[1];
+  const scoreGap = second ? top.confidence - second.confidence : undefined;
 
   // Threshold check
   if (top.confidence < threshold) {
     return {
       resolved: false,
       candidates,
-      explanation: `Top candidate confidence ${top.confidence.toFixed(3)} is below threshold ${threshold}`,
+      explanation: `Best candidate ${top.role}[name="${top.accessibleName}"] scored ${top.confidence.toFixed(3)} (${top.explanation}), below threshold ${threshold.toFixed(3)}`,
       abstentionReason: "below_threshold",
     };
   }
 
-  // Margin constraint: if multiple candidates above threshold, require sufficient gap
-  if (candidates.length > 1) {
-    const second = candidates[1]!;
-    if (second.confidence >= threshold && top.confidence - second.confidence < margin) {
-      return {
-        resolved: false,
-        candidates,
-        explanation: `Ambiguous: top two candidates have confidence ${top.confidence.toFixed(3)} and ${second.confidence.toFixed(3)} (gap ${(top.confidence - second.confidence).toFixed(3)} < margin ${margin})`,
-        abstentionReason: "ambiguous_match",
-      };
-    }
+  // Margin constraint: if the runner-up is too close, abstain even if it is
+  // slightly below threshold. A near-tie is still ambiguous.
+  if (second && scoreGap !== undefined && scoreGap < margin) {
+    return {
+      resolved: false,
+      candidates,
+      explanation: `Ambiguous between ${top.role}[name="${top.accessibleName}"] (${top.confidence.toFixed(3)}) and ${second.role}[name="${second.accessibleName}"] (${second.confidence.toFixed(3)}); gap ${scoreGap.toFixed(3)} is below margin ${margin.toFixed(3)}`,
+      abstentionReason: "ambiguous_match",
+    };
   }
 
   // Resolved successfully
@@ -119,7 +119,9 @@ export function applySafetyGate(
     selectorHint: top.selectorHint,
     candidateIndex: top.candidateIndex,
     confidence: top.confidence,
-    explanation: `Matched ${top.role}[name="${top.accessibleName}"] with confidence ${top.confidence.toFixed(3)}`,
+    scores: top.scores,
+    scoreGap,
+    explanation: `Matched ${top.role}[name="${top.accessibleName}"] with confidence ${top.confidence.toFixed(3)} (${top.explanation}${scoreGap !== undefined ? `, gap ${scoreGap.toFixed(3)}` : ""})`,
     framePath: signature.framePath,
   };
 }

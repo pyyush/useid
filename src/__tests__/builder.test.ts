@@ -141,6 +141,41 @@ describe("buildUSEID", () => {
     expect(sig0.semantic.accessibleName).not.toBe(sig1.semantic.accessibleName);
   });
 
+  it("should include structural context in the hash to avoid duplicate-name collisions", () => {
+    const duplicateNameTree = {
+      role: "WebArea",
+      name: "Page",
+      children: [
+        {
+          role: "group",
+          name: "",
+          children: [{ role: "button", name: "Open" }],
+        },
+        {
+          role: "article",
+          name: "",
+          children: [{ role: "button", name: "Open" }],
+        },
+      ],
+    };
+
+    const navSig = buildUSEID({
+      domSnapshot: makeDOMSnapshot(null),
+      accessibilitySnapshot: makeAXSnapshot(duplicateNameTree),
+      elementIndex: 0,
+      pageUrl,
+    });
+    const mainSig = buildUSEID({
+      domSnapshot: makeDOMSnapshot(null),
+      accessibilitySnapshot: makeAXSnapshot(duplicateNameTree),
+      elementIndex: 1,
+      pageUrl,
+    });
+
+    expect(navSig.semantic.accessibleName).toBe(mainSig.semantic.accessibleName);
+    expect(navSig.hash).not.toBe(mainSig.hash);
+  });
+
   it("should set sibling tokens from adjacent elements", () => {
     const sig = buildUSEID({
       domSnapshot: makeDOMSnapshot(null),

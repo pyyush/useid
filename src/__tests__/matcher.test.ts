@@ -72,6 +72,15 @@ describe("scoreCandidates", () => {
     expect(results[0]!.scores.semantic).toBe(1.0);
   });
 
+  it("should return semantic score of zero when accessible names are missing", () => {
+    const sig = makeSignature({ semantic: { role: "button", accessibleName: "" } });
+    const candidate = makeCandidate({ accessibleName: "" });
+
+    const results = scoreCandidates(sig, [candidate]);
+    expect(results[0]!.scores.semantic).toBe(0);
+    expect(results[0]!.confidence).toBeLessThan(0.5);
+  });
+
   it("should return semantic score of 0.8 for normalized name match", () => {
     const sig = makeSignature({ semantic: { role: "button", accessibleName: "Submit Form" } });
     const candidate = makeCandidate({ accessibleName: "submit  form" });
@@ -108,8 +117,8 @@ describe("scoreCandidates", () => {
     });
 
     const results = scoreCandidates(sig, [candidate]);
-    // ancestorSim=1.0, siblingSim=1.0, depthSim=1.0
-    // structural = 1.0*0.6 + 1.0*0.3 + 1.0*0.1 = 1.0
+    // ancestorSim=1.0, siblingSim=1.0, formAssociationSim=1.0, depthSim=1.0
+    // structural = 1.0*0.5 + 1.0*0.2 + 1.0*0.2 + 1.0*0.1 = 1.0
     expect(results[0]!.scores.structural).toBeCloseTo(1.0, 2);
   });
 
@@ -124,14 +133,43 @@ describe("scoreCandidates", () => {
     });
     const candidate = makeCandidate({
       ancestorRoles: ["nav", "list"],
+      ancestorTags: ["nav", "ul"],
       siblingTokens: [],
       domDepth: 3,
     });
 
     const results = scoreCandidates(sig, [candidate]);
-    // ancestorSim=0 (disjoint), siblingSim=1 (both empty), depthSim=1
-    // structural = 0*0.6 + 1*0.3 + 1*0.1 = 0.4
-    expect(results[0]!.scores.structural).toBeCloseTo(0.4, 2);
+    // ancestorSim=0 (disjoint), siblingSim=1 (both empty), formAssociationSim=1, depthSim=1
+    // structural = 0*0.5 + 1*0.2 + 1*0.2 + 1*0.1 = 0.5
+    expect(results[0]!.scores.structural).toBeCloseTo(0.5, 2);
+  });
+
+  it("should reward matching form association in structural score", () => {
+    const sig = makeSignature({
+      structure: {
+        ancestorRoles: ["main", "form"],
+        ancestorTags: ["main", "form"],
+        siblingTokens: [],
+        formAssociation: "Email Address",
+        domDepth: 3,
+      },
+    });
+
+    const withMatchingLabel = makeCandidate({
+      index: 0,
+      formAssociation: "Email Address",
+      siblingTokens: [],
+    });
+    const withDifferentLabel = makeCandidate({
+      index: 1,
+      formAssociation: "Phone Number",
+      siblingTokens: [],
+      selectorHint: 'role=button[name="submit phone"]',
+    });
+
+    const [best, weaker] = scoreCandidates(sig, [withDifferentLabel, withMatchingLabel]);
+    expect(best.candidateIndex).toBe(0);
+    expect(best.scores.structural).toBeGreaterThan(weaker.scores.structural);
   });
 
   it("should compute spatial score using bbox center distance", () => {
@@ -146,6 +184,20 @@ describe("scoreCandidates", () => {
     const samePos = makeCandidate({ bbox: { x: 100, y: 200, w: 80, h: 40 } });
     const results = scoreCandidates(sig, [samePos]);
     expect(results[0]!.scores.spatial).toBeCloseTo(1.0, 1);
+  });
+
+  it("documents fixed 1024x768 viewport normalization for spatial scoring", () => {
+    const sig = makeSignature({
+      spatial: {
+        bbox: { x: 0, y: 0, w: 10, h: 10 },
+        viewportRelative: { top: 0, left: 0 },
+        region: "main",
+      },
+    });
+    const candidate = makeCandidate({ bbox: { x: 512, y: 384, w: 10, h: 10 } });
+
+    const results = scoreCandidates(sig, [candidate]);
+    expect(results[0]!.scores.spatial).toBeCloseTo(0.5, 5);
   });
 
   it("should return spatial score of zero when bbox has no area", () => {
@@ -196,6 +248,17 @@ describe("scoreCandidates", () => {
     expect(spatialOnly[0]!.confidence).toBeCloseTo(spatialOnly[0]!.scores.spatial, 5);
   });
 
+  it("should reject custom weights that do not sum to 1", () => {
+    const sig = makeSignature();
+    const candidate = makeCandidate();
+
+    expect(() =>
+      scoreCandidates(sig, [candidate], {
+        weights: { semantic: 1, structural: 1, spatial: 1 },
+      })
+    ).toThrow(/sum to 1/i);
+  });
+
   it("should include role and accessibleName in results", () => {
     const sig = makeSignature();
     const candidate = makeCandidate({ role: "button", accessibleName: "Submit" });
@@ -203,5 +266,13 @@ describe("scoreCandidates", () => {
     const results = scoreCandidates(sig, [candidate]);
     expect(results[0]!.role).toBe("button");
     expect(results[0]!.accessibleName).toBe("Submit");
+  });
+
+  it("should include a human-readable explanation for each candidate", () => {
+    const sig = makeSignature();
+    const results = scoreCandidates(sig, [makeCandidate()]);
+    expect(results[0]!.explanation).toContain("semantic");
+    expect(results[0]!.explanation).toContain("structural");
+    expect(results[0]!.explanation).toContain("spatial");
   });
 });

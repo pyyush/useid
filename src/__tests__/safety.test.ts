@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { checkBinding, applySafetyGate } from "../safety.js";
+import { USEIDAbstentionReasonSchema } from "../types.js";
 import type { USEIDSignature, CandidateResult } from "../types.js";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ function makeCandidate(overrides: Partial<CandidateResult> = {}): CandidateResul
     selectorHint: 'role=button[name="submit"]',
     confidence: 0.95,
     scores: { semantic: 1.0, structural: 0.9, spatial: 0.8 },
+    explanation: "semantic exact (1.000), structural strong (0.900), spatial nearby (0.800)",
     role: "button",
     accessibleName: "Submit",
     ...overrides,
@@ -169,6 +171,72 @@ describe("applySafetyGate", () => {
     }
   });
 
+  it("should abstain with ambiguous_match for duplicate same-name candidates", () => {
+    const sig = makeSignature();
+    const first = makeCandidate({
+      candidateIndex: 0,
+      confidence: 0.93,
+      selectorHint: 'role=button[name="submit"]',
+      accessibleName: "Submit",
+    });
+    const duplicate = makeCandidate({
+      candidateIndex: 1,
+      confidence: 0.91,
+      selectorHint: 'role=button[name="submit"]',
+      accessibleName: "Submit",
+    });
+
+    const result = applySafetyGate([first, duplicate], sig, pageUrl);
+
+    expect(result.resolved).toBe(false);
+    if (!result.resolved) {
+      expect(result.abstentionReason).toBe("ambiguous_match");
+    }
+  });
+
+  it("should abstain with below_threshold for weak evidence from incomplete DOM layout", () => {
+    const sig = makeSignature();
+    const weak = makeCandidate({
+      confidence: 0.8,
+      scores: { semantic: 1, structural: 1, spatial: 0 },
+    });
+
+    const result = applySafetyGate([weak], sig, pageUrl);
+
+    expect(result.resolved).toBe(false);
+    if (!result.resolved) {
+      expect(result.abstentionReason).toBe("below_threshold");
+    }
+  });
+
+  it("should abstain with below_threshold for missing accessible-name evidence", () => {
+    const sig = makeSignature({ semantic: { role: "button", accessibleName: "" } });
+    const unnamed = makeCandidate({
+      confidence: 0.3,
+      scores: { semantic: 0, structural: 1, spatial: 0 },
+      accessibleName: "",
+      selectorHint: "role=button[index=0]",
+    });
+
+    const result = applySafetyGate([unnamed], sig, pageUrl);
+
+    expect(result.resolved).toBe(false);
+    if (!result.resolved) {
+      expect(result.abstentionReason).toBe("below_threshold");
+    }
+  });
+
+  it("should abstain when the runner-up is slightly below threshold but still too close", () => {
+    const sig = makeSignature();
+    const first = makeCandidate({ candidateIndex: 0, confidence: 0.86 });
+    const second = makeCandidate({ candidateIndex: 1, confidence: 0.84 });
+    const result = applySafetyGate([first, second], sig, pageUrl);
+    expect(result.resolved).toBe(false);
+    if (!result.resolved) {
+      expect(result.abstentionReason).toBe("ambiguous_match");
+    }
+  });
+
   it("should resolve when top candidate is above threshold with sufficient margin", () => {
     const sig = makeSignature();
     const top = makeCandidate({ candidateIndex: 0, confidence: 0.95 });
@@ -179,6 +247,8 @@ describe("applySafetyGate", () => {
       expect(result.confidence).toBe(0.95);
       expect(result.selectorHint).toBe('role=button[name="submit"]');
       expect(result.candidateIndex).toBe(0);
+      expect(result.scores.semantic).toBe(1);
+      expect(result.scoreGap).toBeCloseTo(0.25, 5);
     }
   });
 
@@ -219,5 +289,35 @@ describe("applySafetyGate", () => {
     if (result.resolved) {
       expect(result.framePath).toEqual(framePath);
     }
+  });
+
+  it("should emit only stable abstention reasons", () => {
+    const results = [
+      applySafetyGate([makeCandidate()], makeSignature({ origin: "https://other.com" }), pageUrl),
+      applySafetyGate([], makeSignature(), pageUrl),
+      applySafetyGate([makeCandidate({ confidence: 0.5 })], makeSignature(), pageUrl),
+      applySafetyGate(
+        [
+          makeCandidate({ candidateIndex: 0, confidence: 0.92 }),
+          makeCandidate({ candidateIndex: 1, confidence: 0.9 }),
+        ],
+        makeSignature(),
+        pageUrl
+      ),
+    ];
+
+    const reasons = results.map((result) => {
+      expect(result.resolved).toBe(false);
+      if (result.resolved) throw new Error("expected abstention");
+      expect(USEIDAbstentionReasonSchema.safeParse(result.abstentionReason).success).toBe(true);
+      return result.abstentionReason;
+    });
+
+    expect(reasons).toEqual([
+      "binding_mismatch",
+      "no_candidates",
+      "below_threshold",
+      "ambiguous_match",
+    ]);
   });
 });

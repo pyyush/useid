@@ -1,7 +1,16 @@
 node_modules
 dist
+coverage
+*.tgz
 .turbo
+.omx
+.bap
+.banners
+.DS_Store
 .dev-session
 .staff-engineer-state.json
 .staff-engineer.json
+AUDIT.md
+AGENTS.md
+docs/plans/
 CLAUDE.md

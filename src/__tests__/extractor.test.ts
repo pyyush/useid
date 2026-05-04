@@ -157,6 +157,161 @@ describe("extractElements", () => {
     expect(button!.bbox).toBeDefined();
   });
 
+  it("matches repeated tags using DOM text content instead of depth alone", () => {
+    const domSnapshot = makeDOMSnapshot({
+      documents: [
+        {
+          nodes: {
+            parentIndex: [-1, 0, 1, 2, 1, 4],
+            nodeType: [1, 1, 1, 3, 1, 3],
+            nodeName: [0, 1, 2, 3, 2, 3],
+            nodeValue: [3, 3, 3, 4, 3, 5],
+            backendNodeId: [1, 2, 3, 4, 5, 6],
+          },
+          layout: {
+            nodeIndex: [0, 1, 2, 4],
+            bounds: [
+              [0, 0, 1024, 768],
+              [0, 0, 400, 200],
+              [10, 10, 120, 40],
+              [10, 60, 120, 40],
+            ],
+          },
+        },
+      ],
+      strings: ["html", "div", "button", "", "Save", "Cancel"],
+    });
+
+    const axTree = {
+      role: "WebArea",
+      name: "Page",
+      children: [
+        { role: "button", name: "Cancel" },
+        { role: "button", name: "Save" },
+      ],
+    };
+
+    const elements = extractElements(domSnapshot, makeAXSnapshot(axTree));
+    const cancel = elements.find((e) => e.accessibleName === "cancel");
+    const save = elements.find((e) => e.accessibleName === "save");
+
+    expect(cancel?.bbox).toEqual({ x: 10, y: 60, w: 120, h: 40 });
+    expect(save?.bbox).toEqual({ x: 10, y: 10, w: 120, h: 40 });
+  });
+
+  it("matches DOM nodes by accessible-name text when multiple same-tag candidates exist", () => {
+    const domSnapshot = makeDOMSnapshot({
+      documents: [
+        {
+          nodes: {
+            parentIndex: [-1, 0, 1, 2, 1, 4],
+            nodeType: [1, 1, 1, 3, 1, 3],
+            nodeName: [0, 1, 2, 4, 2, 5],
+            nodeValue: [3, 3, 3, 4, 3, 5],
+            backendNodeId: [1, 2, 3, 4, 5, 6],
+          },
+          layout: {
+            nodeIndex: [0, 1, 2, 4],
+            bounds: [
+              [0, 0, 1024, 768],
+              [0, 0, 1024, 768],
+              [10, 10, 120, 40],
+              [10, 60, 120, 40],
+            ],
+          },
+        },
+      ],
+      strings: ["html", "div", "button", "", "Save", "Delete"],
+    });
+
+    const axTree = {
+      role: "WebArea",
+      name: "Page",
+      children: [
+        { role: "button", name: "Save" },
+        { role: "button", name: "Delete" },
+      ],
+    };
+
+    const elements = extractElements(domSnapshot, makeAXSnapshot(axTree));
+    const deleteButton = elements.find((e) => e.accessibleName === "delete");
+    expect(deleteButton).toBeDefined();
+    expect(deleteButton!.bbox).toEqual({ x: 10, y: 60, w: 120, h: 40 });
+  });
+
+  it("does not assign DOM geometry when same-tag DOM text conflicts with the a11y name", () => {
+    const domSnapshot = makeDOMSnapshot({
+      documents: [
+        {
+          nodes: {
+            parentIndex: [-1, 0, 1, 2, 1, 4],
+            nodeType: [1, 1, 1, 3, 1, 3],
+            nodeName: [0, 1, 2, 3, 2, 3],
+            nodeValue: [3, 3, 3, 4, 3, 5],
+            backendNodeId: [1, 2, 3, 4, 5, 6],
+          },
+          layout: {
+            nodeIndex: [0, 1, 2, 4],
+            bounds: [
+              [0, 0, 1024, 768],
+              [0, 0, 1024, 768],
+              [10, 10, 120, 40],
+              [10, 60, 120, 40],
+            ],
+          },
+        },
+      ],
+      strings: ["html", "div", "button", "", "Save", "Delete"],
+    });
+
+    const axTree = {
+      role: "WebArea",
+      name: "Page",
+      children: [{ role: "button", name: "Archive" }],
+    };
+
+    const elements = extractElements(domSnapshot, makeAXSnapshot(axTree));
+    const archive = elements.find((e) => e.accessibleName === "archive");
+    expect(archive).toBeDefined();
+    expect(archive!.bbox).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+    expect(archive!.ancestorTags).toEqual([]);
+  });
+
+  it("uses zero bbox when a DOM snapshot has no layout entry for the matched element", () => {
+    const domSnapshot = makeDOMSnapshot({
+      documents: [
+        {
+          nodes: {
+            parentIndex: [-1, 0, 1, 2],
+            nodeType: [1, 1, 1, 3],
+            nodeName: [0, 1, 2, 3],
+            nodeValue: [3, 3, 3, 4],
+            backendNodeId: [1, 2, 3, 4],
+          },
+          layout: {
+            nodeIndex: [0, 1],
+            bounds: [
+              [0, 0, 1024, 768],
+              [0, 0, 1024, 768],
+            ],
+          },
+        },
+      ],
+      strings: ["html", "div", "button", "", "Save"],
+    });
+
+    const axTree = {
+      role: "WebArea",
+      name: "Page",
+      children: [{ role: "button", name: "Save" }],
+    };
+
+    const elements = extractElements(domSnapshot, makeAXSnapshot(axTree));
+    const save = elements.find((e) => e.accessibleName === "save");
+    expect(save).toBeDefined();
+    expect(save!.bbox).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+  });
+
   it("filters out generic roles without names", () => {
     const axTree = {
       role: "WebArea",

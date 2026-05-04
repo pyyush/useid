@@ -7,8 +7,8 @@ import type { DOMSnapshotResult, AccessibilitySnapshotResult } from "./snapshot-
 import type { USEIDSignature, USEIDConfig, FramePathEntry } from "./types.js";
 import { USEIDConfigSchema } from "./types.js";
 import { extractElements } from "./extractor.js";
-import { normalizeAccessibleName } from "./canonicalizer.js";
 import { USEID_VERSION, DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT } from "./constants.js";
+import { buildIdentityFingerprintInput } from "./fingerprint.js";
 
 export interface BuildUSEIDOptions {
   domSnapshot: DOMSnapshotResult;
@@ -63,14 +63,9 @@ export function buildUSEID(opts: BuildUSEIDOptions): USEIDSignature {
   if (element.siblingTokens.length > 0) confidence += 0.1;
   confidence = Math.min(confidence, 1);
 
-  // Compute hash of canonical (origin + pagePath + semantic core)
-  const hashInput = [
-    origin,
-    pagePath,
-    element.role,
-    normalizeAccessibleName(element.accessibleName),
-  ].join("|");
-  const hash = createHash("sha256").update(hashInput).digest("hex");
+  const hash = createHash("sha256")
+    .update(buildIdentityFingerprintInput(origin, pagePath, opts.framePath, element))
+    .digest("hex");
 
   return {
     version: USEID_VERSION,

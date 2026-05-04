@@ -108,6 +108,28 @@ describe("resolveUSEID", () => {
       expect(result.abstentionReason).toBe("binding_mismatch");
     }
   });
+
+  it("should abstain with no_candidates when no element has the expected role", () => {
+    const domSnapshot = makeDOMSnapshot(null);
+    const accessibilitySnapshot = makeAXSnapshot({
+      role: "WebArea",
+      name: "Page",
+      children: [{ role: "link", name: "Home" }],
+    });
+
+    const signature = makeSignature();
+    const result = resolveUSEID({
+      signature,
+      domSnapshot,
+      accessibilitySnapshot,
+      pageUrl,
+    });
+
+    expect(result.resolved).toBe(false);
+    if (!result.resolved) {
+      expect(result.abstentionReason).toBe("no_candidates");
+    }
+  });
 });
 
 // ── compareUSEID ────────────────────────────────────────────────────────────
@@ -157,13 +179,135 @@ describe("compareUSEID", () => {
   it("should return 1 when names differ only by case/whitespace", () => {
     const a = makeSignature({
       hash: "hash-a",
-      semantic: { role: "button", accessibleName: "Submit Form" },
+      semantic: {
+        role: "button",
+        accessibleName: "Submit Form",
+        accessibleDescription: "Primary checkout action",
+      },
+      structure: {
+        ancestorRoles: ["main", "form"],
+        ancestorTags: ["main", "form"],
+        siblingTokens: ["cancel"],
+        formAssociation: "Checkout",
+        domDepth: 1,
+      },
+      spatial: {
+        bbox: { x: 0, y: 0, w: 0, h: 0 },
+        viewportRelative: { top: 0, left: 0 },
+        region: "main",
+      },
     });
     const b = makeSignature({
       hash: "hash-b",
-      semantic: { role: "button", accessibleName: "submit  form" },
+      semantic: {
+        role: "button",
+        accessibleName: "submit  form",
+        accessibleDescription: "primary checkout action",
+      },
+      structure: {
+        ancestorRoles: ["main", "form"],
+        ancestorTags: ["main", "form"],
+        siblingTokens: ["cancel"],
+        formAssociation: "checkout",
+        domDepth: 1,
+      },
+      spatial: {
+        bbox: { x: 0, y: 0, w: 0, h: 0 },
+        viewportRelative: { top: 0, left: 0 },
+        region: "main",
+      },
     });
     expect(compareUSEID(a, b)).toBe(1);
+  });
+
+  it("should return 0 when frame paths differ", () => {
+    const a = makeSignature({
+      framePath: [{ url: "https://example.com/frame-a", index: 0 }],
+    });
+    const b = makeSignature({
+      framePath: [{ url: "https://example.com/frame-b", index: 0 }],
+    });
+    expect(compareUSEID(a, b)).toBe(0);
+  });
+
+  it("should return 0.5 when semantic core matches but context diverges", () => {
+    const a = makeSignature({
+      hash: "hash-a",
+      semantic: {
+        role: "button",
+        accessibleName: "Submit",
+        accessibleDescription: "Primary action",
+      },
+      structure: {
+        ancestorRoles: ["main", "checkout-form"],
+        ancestorTags: ["main", "form"],
+        siblingTokens: ["cancel"],
+        formAssociation: "Checkout",
+        domDepth: 1,
+      },
+      spatial: {
+        bbox: { x: 0, y: 0, w: 0, h: 0 },
+        viewportRelative: { top: 0, left: 0 },
+        region: "main",
+      },
+    });
+    const b = makeSignature({
+      hash: "hash-b",
+      semantic: {
+        role: "button",
+        accessibleName: "Submit",
+        accessibleDescription: "Primary action",
+      },
+      structure: {
+        ancestorRoles: ["nav"],
+        ancestorTags: ["nav"],
+        siblingTokens: ["home"],
+        formAssociation: "Header",
+        domDepth: 1,
+      },
+      spatial: {
+        bbox: { x: 0, y: 0, w: 0, h: 0 },
+        viewportRelative: { top: 0, left: 0 },
+        region: "nav",
+      },
+    });
+
+    expect(compareUSEID(a, b)).toBe(0.5);
+  });
+
+  it("should return 0.5 when same name and role have different structural context", () => {
+    const a = makeSignature({
+      hash: "hash-a",
+      semantic: { role: "button", accessibleName: "Open" },
+      structure: {
+        ancestorRoles: ["navigation"],
+        ancestorTags: ["nav"],
+        siblingTokens: ["close"],
+        domDepth: 2,
+      },
+      spatial: {
+        bbox: { x: 0, y: 0, w: 0, h: 0 },
+        viewportRelative: { top: 0, left: 0 },
+        region: "nav",
+      },
+    });
+    const b = makeSignature({
+      hash: "hash-b",
+      semantic: { role: "button", accessibleName: "Open" },
+      structure: {
+        ancestorRoles: ["main"],
+        ancestorTags: ["main"],
+        siblingTokens: ["save"],
+        domDepth: 3,
+      },
+      spatial: {
+        bbox: { x: 0, y: 0, w: 0, h: 0 },
+        viewportRelative: { top: 0, left: 0 },
+        region: "main",
+      },
+    });
+
+    expect(compareUSEID(a, b)).toBe(0.5);
   });
 });
 
@@ -176,6 +320,8 @@ describe("explainResolution", () => {
       selectorHint: 'role=button[name="submit"]',
       candidateIndex: 0,
       confidence: 0.95,
+      scores: { semantic: 1, structural: 0.9, spatial: 0.8 },
+      scoreGap: 0.2,
       explanation: 'Matched button[name="Submit"] with confidence 0.950',
     };
 
@@ -193,6 +339,7 @@ describe("explainResolution", () => {
           selectorHint: 'role=button[name="submit"]',
           confidence: 0.5,
           scores: { semantic: 0.6, structural: 0.4, spatial: 0.3 },
+          explanation: "semantic partial (0.600), structural weak (0.400), spatial weak (0.300)",
           role: "button",
           accessibleName: "Submit",
         },
@@ -210,7 +357,7 @@ describe("explainResolution", () => {
     const result: ResolveResult = {
       resolved: false,
       candidates: [],
-      explanation: "No candidate elements found matching the signature role",
+      explanation: 'No candidate elements found for role="button" name="Submit"',
       abstentionReason: "no_candidates",
     };
 
@@ -261,6 +408,51 @@ describe("redactUSEID", () => {
     });
     const redacted = redactUSEID(sig);
     expect(redacted.structure.formAssociation).toBeUndefined();
+  });
+
+  it("should compute redacted hash without redacted context fields", () => {
+    const first = makeSignature({
+      semantic: {
+        role: "button",
+        accessibleName: "Submit",
+        accessibleDescription: "Primary checkout action",
+      },
+      structure: {
+        ancestorRoles: ["main"],
+        ancestorTags: ["main"],
+        siblingTokens: ["email", "password"],
+        formAssociation: "Email Address",
+        domDepth: 2,
+      },
+    });
+    const second = makeSignature({
+      semantic: {
+        role: "button",
+        accessibleName: "Submit",
+        accessibleDescription: "Sensitive billing action",
+      },
+      structure: {
+        ancestorRoles: ["main"],
+        ancestorTags: ["main"],
+        siblingTokens: ["billing", "phone"],
+        formAssociation: "Phone Number",
+        domDepth: 2,
+      },
+    });
+
+    const redactedFirst = redactUSEID(first);
+    const redactedSecond = redactUSEID(second);
+
+    expect(redactedFirst.semantic.accessibleName).toMatch(/^\[redacted:[a-f0-9]{16}\]$/);
+    expect(redactedFirst.semantic.accessibleName).not.toContain("Submit");
+    expect(redactedFirst.semantic.accessibleDescription).toBe("[redacted]");
+    expect(redactedFirst.structure.siblingTokens).toEqual([]);
+    expect(redactedFirst.structure.formAssociation).toBeUndefined();
+    expect(redactedSecond.semantic.accessibleName).toBe(redactedFirst.semantic.accessibleName);
+    expect(redactedSecond.semantic.accessibleDescription).toBe("[redacted]");
+    expect(redactedSecond.structure.siblingTokens).toEqual([]);
+    expect(redactedSecond.structure.formAssociation).toBeUndefined();
+    expect(redactedFirst.hash).toBe(redactedSecond.hash);
   });
 
   it("should produce deterministic hash for same input", () => {

@@ -7,7 +7,8 @@ import { normalizeRole } from "./canonicalizer.js";
 
 /**
  * Generate candidate elements that could match a uSEID signature.
- * Strategy: start with role match, then widen to all elements if no role matches.
+ * Strategy: only consider same-role elements. uSEID abstains when the expected
+ * role is absent instead of widening to unrelated elements.
  */
 export function generateCandidates(
   signature: USEIDSignature,
@@ -15,10 +16,5 @@ export function generateCandidates(
 ): NormalizedElement[] {
   const targetRole = normalizeRole(signature.semantic.role);
 
-  // Primary: filter by matching role
-  const roleMatches = elements.filter((e) => e.role === targetRole);
-  if (roleMatches.length > 0) return roleMatches;
-
-  // Fallback: return all elements (matcher will score them low)
-  return elements;
+  return elements.filter((e) => e.role === targetRole);
 }
