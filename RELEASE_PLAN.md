@@ -17,11 +17,25 @@ Target release: `1.0.0`.
 Semver justification:
 
 - npm latest verified during this phase: `@pyyush/useid@0.1.0`.
-- Local audit baseline: `package.json` is `0.2.0`, unpublished as latest; `package-lock.json` root still has name drift.
+- Local audit baseline after release-hardening checkpoint: `package.json` and `package-lock.json` are intentionally aligned at `0.2.0`, unpublished as latest.
 - The mission is a stable, secure, valuable major release, and the audit identifies public API decisions that should be finalized before a stable contract.
 - Pre-1.0 changes may break or tighten API semantics. Once result schemas, abstention reasons, config behavior, support claims, and release distribution are stable, the correct semver target is `1.0.0`.
 
 If the orchestrator elects an interim publish before stable-major, use `0.2.0` or a later `0.x` version. This plan is for the stable major release.
+
+Pre-RC version policy:
+
+- Keep local package metadata at `0.2.0` until a release owner creates the RC version-bump commit.
+- For the first RC, bump `package.json` and `package-lock.json` together to `1.0.0-rc.1`, commit that change, and tag the same commit as `v1.0.0-rc.1`.
+- Later RCs use `1.0.0-rc.2`, `1.0.0-rc.3`, and so on.
+- The release workflow rejects any tag/package mismatch, accepts only stable `x.y.z` or RC `x.y.z-rc.N` versions, publishes RCs under the npm `rc` dist-tag, and marks RC GitHub releases as prereleases.
+- Final stable release uses `1.0.0`, tag `v1.0.0`, npm dist-tag `latest`, and a non-prerelease GitHub release.
+
+Remote release-owner evidence:
+
+- Remote GitHub settings for `pyyush/useid` are enabled: `main` requires one review, CODEOWNERS review, stale review dismissal, conversation resolution, linear history, no force-push/delete, admin enforcement, and status contexts `test (20)` and `test (22)`.
+- Dependabot vulnerability alerts/security updates, secret scanning, push protection, and private vulnerability reporting are enabled.
+- Local npm identity evidence: `npm whoami` reports `pyyush`.
 
 ## Cycle Estimate Model
 
@@ -440,7 +454,7 @@ Total estimate: 15 cycles.
 
 **DoD:** Release & distribution, Value, Stability, Docs
 
-**Status:** In progress for Phase 3 Task 10 on 2026-05-04. Local RC gate preparation is complete, but Task 10 is not complete because no actual RC artifact/tag/publish has been created and no external or external-like user validation has occurred.
+**Status:** In progress for Phase 3 Task 10 on 2026-05-04. Local RC gate preparation is complete, and the pre-RC version policy is now explicit, but Task 10 is not complete because no actual RC artifact/tag/publish has been created and no external or external-like user validation has occurred.
 
 **Current RC gate status:**
 
@@ -449,20 +463,23 @@ Total estimate: 15 cycles.
 - Public npm latest: registry reports `@pyyush/useid@0.1.0` under the `latest` dist-tag.
 - Local package: current branch package metadata is `@pyyush/useid@0.2.0`.
 - Stable release target in this plan: `1.0.0`; it is not published and no RC has been cut.
+- Version alignment policy: keep `package.json` and `package-lock.json` at `0.2.0` until the RC owner intentionally commits a `1.0.0-rc.N` version bump. The release workflow requires the tag version to exactly match package metadata.
+- RC naming policy: use npm SemVer `1.0.0-rc.N` and Git tag `v1.0.0-rc.N`. RC publishes use npm dist-tag `rc` and GitHub prereleases; stable publishes use npm dist-tag `latest` and normal GitHub releases.
+- Confirmed remote settings: branch protection, required `test (20)`/`test (22)` contexts, CODEOWNERS review, Dependabot security, secret scanning/push protection, private vulnerability reporting, and npm identity `pyyush` are now recorded as enabled evidence rather than blockers.
 - Package dry-run contents: 8 files only: `CHANGELOG.md`, `LICENSE`, `README.md`, `dist/index.cjs`, `dist/index.d.cts`, `dist/index.d.ts`, `dist/index.js`, and `package.json`.
 - Internal package-content check: no `AGENTS.md`, `CLAUDE.md`, `AUDIT.md`, `RELEASE_PLAN.md`, `RC_VALIDATION.md`, `docs/plans`, `.omx`, `.bap`, `.banners`, `coverage`, `examples`, or `src` files were included in the dry-run package.
 
 **Plan:**
 
 - Cut an RC only after local and CI gates pass.
+- Before tagging the RC, run `npm version 1.0.0-rc.N --no-git-tag-version`, review the `package.json` and `package-lock.json` version-only diff, commit it, and tag the exact commit as `v1.0.0-rc.N`.
 - Run package install/import checks from a clean external sample project.
 - Ask at least one external or external-like browser-agent user to validate the grounding-gate docs/example.
 - Record feedback and decide whether it blocks `1.0.0`.
 
 **Concrete blockers before Task 10 can complete:**
 
-- Clean release branch/worktree is required; the current workspace still contains broad pre-existing dirty source, test, docs, package, workflow, and release-plan work.
-- Registry credentials and npm provenance context are required for an actual RC publish path.
+- The package/package-lock version is intentionally still `0.2.0`; an actual RC requires a committed `1.0.0-rc.N` version bump and matching `v1.0.0-rc.N` tag.
 - An actual RC artifact/tag/package is required; no tag or publish was created during this local preparation.
 - At least one external or external-like RC user is required; none has validated the package/docs/example yet.
 
@@ -491,6 +508,7 @@ Total estimate: 15 cycles.
 - `npm view @pyyush/useid version --json`: `0.1.0`.
 - `npm view @pyyush/useid dist-tags --json`: `{ "latest": "0.1.0" }`.
 - Local package metadata inspection: `@pyyush/useid@0.2.0`, `publishConfig.access` is `public`, registry is `https://registry.npmjs.org/`.
+- Pre-RC policy check: local `release:verify` now asserts package/package-lock name/version alignment and release-workflow prerelease policy before running build, tests, audit, and pack dry-run.
 
 **Exit criteria:**
 
@@ -518,7 +536,7 @@ Total estimate: 15 cycles.
 
 ## Dependencies
 
-- Task 1 blocks every implementation task because the worktree is already dirty.
+- Task 1 originally blocked implementation because the worktree was dirty; the release-hardening checkpoint is now clean, so only scoped RC version-bump work should be added before tagging.
 - Task 3 should land before Tasks 4, 5, and 8 because stable schemas and result contracts affect tests and docs.
 - Task 2 should land before docs and release validation because privacy behavior must not be documented around a known bug.
 - Task 5 depends on Tasks 3 and 4 so fixtures assert final API and safety behavior.
@@ -530,9 +548,8 @@ Total estimate: 15 cycles.
 
 Current blockers for release:
 
-- Public npm latest is `0.1.0`, while local package metadata is `0.2.0` and the stable target remains `1.0.0`; no RC artifact/tag/package has been created.
-- A clean release branch/worktree is still required; the workspace remains dirty with pre-existing source, test, package, workflow, README, changelog, examples, fixture, and fingerprint changes.
-- Registry credentials and npm provenance context have not been verified for an actual RC publish path.
+- Public npm latest is `0.1.0`, while local package metadata is intentionally `0.2.0` and the stable target remains `1.0.0`; no RC artifact/tag/package has been created.
+- An RC version-bump commit is still required: update `package.json` and `package-lock.json` to `1.0.0-rc.N`, commit them, and tag the same commit as `v1.0.0-rc.N`.
 - At least one external or external-like RC user still needs to validate the package/docs/example.
 - Performance-budget timing was sensitive during local RC prep: one focused extraction-budget run failed before subsequent focused and full-gate reruns passed.
 
@@ -593,7 +610,7 @@ Decision:
 
 ### Implementation Gate
 
-Status: Local preparation evidence exists from Tasks 2-10, with the latest `npm run release:verify` passing. A clean release branch and CI confirmation are still required before RC.
+Status: Local preparation evidence exists from Tasks 2-10, with the latest `npm run release:verify` passing. CI confirmation is still required before RC.
 
 Required evidence:
 
@@ -608,11 +625,11 @@ Required evidence:
 
 ### RC Gate
 
-Status: Blocked until a clean release branch exists and an actual RC artifact/tag/package is created.
+Status: Blocked until an RC version-bump commit and actual RC artifact/tag/package are created.
 
 Required evidence:
 
-- `1.0.0-rc` package or dry-run artifact reviewed from a clean checkout.
+- `1.0.0-rc.N` package or dry-run artifact reviewed from a clean checkout.
 - API and package contents reviewed.
 - README, changelog, migration notes, support limits, and browser-harness docs/examples reviewed.
 - Known bugs and accepted limitations documented.
@@ -636,16 +653,16 @@ Required evidence:
 - Clean release branch/worktree except intended release artifacts.
 - CI green on Node 20/22.
 - Security audit clean or human risk acceptance recorded.
-- npm publish provenance path verified.
+- npm provenance workflow and npm identity evidence recorded; actual publish evidence still required.
 - GitHub release notes include support matrix, known limits, and browser-harness scope boundary.
 
 ## Definition Of Done Delta
 
 Remaining release delta after Task 10 local preparation:
 
-- RC artifact evidence from a clean release branch.
+- RC artifact evidence from a clean release branch after the `1.0.0-rc.N` version-bump commit.
 - External or external-like user validation evidence.
-- Final publish/release evidence after credentials, provenance, and release notes are verified.
+- Final publish/release evidence after the RC and external-user gates pass.
 
 ## Phase 3 Starting Point
 

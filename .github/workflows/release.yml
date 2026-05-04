@@ -43,6 +43,16 @@ jobs:
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           PKG_VERSION="$(node -p "require('./package.json').version")"
           test "$TAG_VERSION" = "$PKG_VERSION"
+          VERSION="$PKG_VERSION" node - <<'NODE'
+          const version = process.env.VERSION;
+          const stableSemverPattern = /^\d+\.\d+\.\d+$/;
+          const rcSemverPattern = /^\d+\.\d+\.\d+-rc\.\d+$/;
+
+          if (!stableSemverPattern.test(version) && !rcSemverPattern.test(version)) {
+            console.error(`Release tags must match x.y.z or x.y.z-rc.N, got ${version}`);
+            process.exit(1);
+          }
+          NODE
       - name: Build package
         run: npm run build
       - name: Typecheck
@@ -90,7 +100,27 @@ jobs:
 
       - run: npm ci
       - run: npm run build
-      - run: npm publish --access public --provenance
+      - name: Resolve release policy
+        id: release_policy
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          VERSION="$VERSION" node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const version = process.env.VERSION;
+          const stableSemverPattern = /^\d+\.\d+\.\d+$/;
+          const rcSemverPattern = /^\d+\.\d+\.\d+-rc\.\d+$/;
+
+          if (rcSemverPattern.test(version)) {
+            console.log("npm_tag=rc");
+            console.log("github_prerelease=true");
+          } else if (stableSemverPattern.test(version)) {
+            console.log("npm_tag=latest");
+            console.log("github_prerelease=false");
+          } else {
+            console.error(`Release tags must match x.y.z or x.y.z-rc.N, got ${version}`);
+            process.exit(1);
+          }
+          NODE
+      - run: npm publish --access public --provenance --tag "${{ steps.release_policy.outputs.npm_tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -98,3 +128,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ steps.release_policy.outputs.github_prerelease }}

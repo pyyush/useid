@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "release:verify": "npm run build && npm run typecheck && npm test && npm test -- src/__tests__/performance-budget.test.ts && npm audit --json && npm pack --dry-run >/dev/null",
+    "release:verify": "node scripts/check-release-policy.mjs && npm run build && npm run typecheck && npm test && npm test -- src/__tests__/performance-budget.test.ts && npm audit --json && npm pack --dry-run >/dev/null",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist"
   },

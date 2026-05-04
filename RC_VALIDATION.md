@@ -2,13 +2,33 @@
 
 This handoff is for validating a future `@pyyush/useid@1.0.0-rc.*` artifact before the stable `1.0.0` release. Do not treat this document as evidence that an RC exists; it is the checklist to run once an artifact is available.
 
+## Version And RC Naming Policy
+
+The repository package version intentionally remains `0.2.0` until a release owner creates the RC version-bump commit. That avoids advertising `1.0.0` stability before the RC artifact, external validation, and final release gates exist.
+
+For the first RC, update `package.json` and `package-lock.json` together to `1.0.0-rc.1` from a clean release branch, commit that version bump, and then tag the exact commit as `v1.0.0-rc.1`. Later RCs use `1.0.0-rc.2`, `1.0.0-rc.3`, and so on. The release workflow rejects tags that do not exactly match `package.json`, accepts only stable `x.y.z` or RC `x.y.z-rc.N` versions, publishes RCs with the npm `rc` dist-tag, and marks RC GitHub releases as prereleases. The final stable release uses `1.0.0`, tag `v1.0.0`, npm dist-tag `latest`, and a non-prerelease GitHub release.
+
+Suggested local version-bump command for the RC owner:
+
+```bash
+npm version 1.0.0-rc.1 --no-git-tag-version
+git diff -- package.json package-lock.json
+```
+
+Do not publish or tag from this handoff alone.
+
+## Release Owner Evidence
+
+Remote GitHub settings for `pyyush/useid` are enabled for the RC path: `main` requires one review, CODEOWNERS review, stale review dismissal, conversation resolution, linear history, no force-push/delete, admin enforcement, and status contexts `test (20)` and `test (22)`. Dependabot vulnerability alerts/security updates, secret scanning, push protection, and private vulnerability reporting are enabled. The local npm identity check currently reports `npm whoami` as `pyyush`.
+
 ## Install Source Placeholders
 
 Fill these in before sending the handoff to a validator:
 
 - RC version: `<1.0.0-rc.N>`
 - Install source:
-  - npm dist-tag: `npm install @pyyush/useid@<1.0.0-rc.N>`
+  - npm dist-tag: `npm install @pyyush/useid@rc`
+  - explicit npm version: `npm install @pyyush/useid@<1.0.0-rc.N>`
   - tarball: `npm install <absolute-or-shared-path>/pyyush-useid-<1.0.0-rc.N>.tgz`
   - GitHub source checkout, if no package artifact exists yet: `<repository-url-or-archive>@<commit-or-tag>`
 - Source commit: `<git-sha>`
@@ -190,8 +210,6 @@ The validator does not need to adopt uSEID permanently. The goal is to prove ins
 ## Known Blockers
 
 - No `1.0.0-rc.*` artifact, tag, or npm publish exists yet.
-- A clean release branch/worktree is still required before cutting the RC.
-- npm registry credentials and provenance context have not been verified for the RC publish path.
+- The package version is intentionally still `0.2.0`; the RC owner must make and commit the `1.0.0-rc.N` package/package-lock version bump before tagging.
 - At least one external or external-like validator must run the RC in their own project or representative sample.
 - The local performance budget was timing-sensitive during RC prep; watch extraction-budget evidence in CI and validator hardware notes.
-- This repository workspace currently has broad pre-existing dirty release-prep changes; do not treat local dirty state as release-branch readiness.
