@@ -454,16 +454,17 @@ Total estimate: 15 cycles.
 
 **DoD:** Release & distribution, Value, Stability, Docs
 
-**Status:** In progress for Phase 3 Task 10 on 2026-05-04. Local RC gate preparation is complete, and the pre-RC version policy is now explicit, but Task 10 is not complete because no actual RC artifact/tag/publish has been created and no external or external-like user validation has occurred.
+**Status:** In progress for Phase 3 Task 10 on 2026-05-04. `@pyyush/useid@1.0.0-rc.1` has been published through the release workflow, but Task 10 is not complete because no external or external-like user validation has occurred.
 
 **Current RC gate status:**
 
 - Local release verification gate: latest full `npm run release:verify` passed on 2026-05-04.
 - Timing note: the first `npm run release:verify` attempt failed in the focused performance-budget step because 600-element extraction took about 2531 ms against the 2000 ms budget. A focused rerun of `npm test -- src/__tests__/performance-budget.test.ts` passed, and a second full `npm run release:verify` passed. Treat the extraction budget as timing-sensitive evidence to watch in CI/RC.
 - Public npm latest: registry reports `@pyyush/useid@0.1.0` under the `latest` dist-tag.
-- Local package: current branch package metadata is `@pyyush/useid@0.2.0`.
-- Stable release target in this plan: `1.0.0`; it is not published and no RC has been cut.
-- Version alignment policy: keep `package.json` and `package-lock.json` at `0.2.0` until the RC owner intentionally commits a `1.0.0-rc.N` version bump. The release workflow requires the tag version to exactly match package metadata.
+- Public npm RC: registry reports `@pyyush/useid@1.0.0-rc.1` under the `rc` dist-tag.
+- Local package: current release branch package metadata is `@pyyush/useid@1.0.0-rc.1`.
+- Stable release target in this plan: `1.0.0`; it is not published.
+- Version alignment policy: RC commits set `package.json` and `package-lock.json` to `1.0.0-rc.N`; the final release commit sets both to `1.0.0`. The release workflow requires the tag version to exactly match package metadata.
 - RC naming policy: use npm SemVer `1.0.0-rc.N` and Git tag `v1.0.0-rc.N`. RC publishes use npm dist-tag `rc` and GitHub prereleases; stable publishes use npm dist-tag `latest` and normal GitHub releases.
 - Confirmed remote settings: branch protection, required `test (20)`/`test (22)` contexts, CODEOWNERS review, Dependabot security, secret scanning/push protection, private vulnerability reporting, and npm identity `pyyush` are now recorded as enabled evidence rather than blockers.
 - Package dry-run contents: 8 files only: `CHANGELOG.md`, `LICENSE`, `README.md`, `dist/index.cjs`, `dist/index.d.cts`, `dist/index.d.ts`, `dist/index.js`, and `package.json`.
@@ -471,16 +472,14 @@ Total estimate: 15 cycles.
 
 **Plan:**
 
-- Cut an RC only after local and CI gates pass.
-- Before tagging the RC, run `npm version 1.0.0-rc.N --no-git-tag-version`, review the `package.json` and `package-lock.json` version-only diff, commit it, and tag the exact commit as `v1.0.0-rc.N`.
+- Cut follow-up RCs only after local and CI gates pass.
+- Before tagging a follow-up RC, run `npm version 1.0.0-rc.N --no-git-tag-version`, review the `package.json` and `package-lock.json` version-only diff, commit it, and tag the exact commit as `v1.0.0-rc.N`.
 - Run package install/import checks from a clean external sample project.
 - Ask at least one external or external-like browser-agent user to validate the grounding-gate docs/example.
 - Record feedback and decide whether it blocks `1.0.0`.
 
 **Concrete blockers before Task 10 can complete:**
 
-- The package/package-lock version is intentionally still `0.2.0`; an actual RC requires a committed `1.0.0-rc.N` version bump and matching `v1.0.0-rc.N` tag.
-- An actual RC artifact/tag/package is required; no tag or publish was created during this local preparation.
 - At least one external or external-like RC user is required; none has validated the package/docs/example yet.
 
 **Required external-user evidence fields:**
@@ -506,8 +505,11 @@ Total estimate: 15 cycles.
 - `npm pack --dry-run --json`: passed for `@pyyush/useid@0.2.0`, package size 36,995 bytes, unpacked size 156,548 bytes, 8 files.
 - Package internal-file assertion from dry-run JSON: passed with an empty forbidden-file list.
 - `npm view @pyyush/useid version --json`: `0.1.0`.
-- `npm view @pyyush/useid dist-tags --json`: `{ "latest": "0.1.0" }`.
-- Local package metadata inspection: `@pyyush/useid@0.2.0`, `publishConfig.access` is `public`, registry is `https://registry.npmjs.org/`.
+- `npm view @pyyush/useid dist-tags --json`: `{ "latest": "0.1.0", "rc": "1.0.0-rc.1" }`.
+- `npm view @pyyush/useid@1.0.0-rc.1 dist.tarball dist.integrity dist.shasum --json`: tarball `https://registry.npmjs.org/@pyyush/useid/-/useid-1.0.0-rc.1.tgz`, integrity `sha512-G8wvm6PIQlIH0rvhLJNC43pRiGfsKQHiTqyC73YKnhzzlKaZ0aA6ewZDeF73Asds1la7t9s4HgKinBwcfVhxuA==`, shasum `e35a3a16386110137f8e116435be9bf9858636c9`.
+- Release workflow `v1.0.0-rc.1`: passed at `https://github.com/pyyush/useid/actions/runs/25339009937`.
+- GitHub prerelease: `https://github.com/pyyush/useid/releases/tag/v1.0.0-rc.1`.
+- Local package metadata inspection: `@pyyush/useid@1.0.0-rc.1`, `publishConfig.access` is `public`, registry is `https://registry.npmjs.org/`.
 - Pre-RC policy check: local `release:verify` now asserts package/package-lock name/version alignment and release-workflow prerelease policy before running build, tests, audit, and pack dry-run.
 
 **Exit criteria:**
@@ -625,18 +627,18 @@ Required evidence:
 
 ### RC Gate
 
-Status: Blocked until an RC version-bump commit and actual RC artifact/tag/package are created.
+Status: Passed for `1.0.0-rc.1`; blocked only for follow-up RCs if release-blocking feedback requires another candidate.
 
 Required evidence:
 
-- `1.0.0-rc.N` package or dry-run artifact reviewed from a clean checkout.
+- `1.0.0-rc.1` package reviewed from the release workflow artifact and npm registry metadata.
 - API and package contents reviewed.
 - README, changelog, migration notes, support limits, and browser-harness docs/examples reviewed.
 - Known bugs and accepted limitations documented.
 
 ### External-User Gate
 
-Status: Blocked until RC gate passes.
+Status: Blocked until at least one external or external-like validator runs `1.0.0-rc.1`.
 
 Required evidence:
 
