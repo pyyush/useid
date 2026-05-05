@@ -2,10 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   USEIDSignatureSchema,
   USEIDConfigSchema,
+  USEIDAbstentionReasonSchema,
   ResolveResultSchema,
   CandidateResultSchema,
   FramePathEntrySchema,
   SemanticRegionSchema,
+  type USEIDAbstentionReason,
 } from "../types.js";
 
 const validSignature = {
@@ -104,6 +106,57 @@ describe("USEIDConfigSchema", () => {
     const result = USEIDConfigSchema.safeParse({ threshold: 1.5 });
     expect(result.success).toBe(false);
   });
+
+  it("accepts custom weights that sum to 1", () => {
+    const result = USEIDConfigSchema.safeParse({
+      weights: { semantic: 0.7, structural: 0.2, spatial: 0.1 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects custom weights that do not sum to 1", () => {
+    const result = USEIDConfigSchema.safeParse({
+      weights: { semantic: 1, structural: 1, spatial: 1 },
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("USEIDAbstentionReasonSchema", () => {
+  const reasons = [
+    "binding_mismatch",
+    "no_candidates",
+    "below_threshold",
+    "ambiguous_match",
+  ] as const satisfies readonly USEIDAbstentionReason[];
+
+  function labelReason(reason: USEIDAbstentionReason): string {
+    switch (reason) {
+      case "binding_mismatch":
+        return "Binding mismatch";
+      case "no_candidates":
+        return "No candidates";
+      case "below_threshold":
+        return "Below threshold";
+      case "ambiguous_match":
+        return "Ambiguous match";
+      default: {
+        const exhaustive: never = reason;
+        return exhaustive;
+      }
+    }
+  }
+
+  it("accepts every stable abstention reason", () => {
+    for (const reason of reasons) {
+      expect(USEIDAbstentionReasonSchema.safeParse(reason).success).toBe(true);
+      expect(labelReason(reason)).toBeTruthy();
+    }
+  });
+
+  it("rejects unknown abstention reasons", () => {
+    expect(USEIDAbstentionReasonSchema.safeParse("timeout").success).toBe(false);
+  });
 });
 
 describe("ResolveResultSchema", () => {
@@ -113,6 +166,7 @@ describe("ResolveResultSchema", () => {
       selectorHint: 'role=button[name="ok"]',
       candidateIndex: 0,
       confidence: 0.95,
+      scores: { semantic: 1, structural: 0.8, spatial: 0.7 },
       explanation: "Matched",
     });
     expect(result.success).toBe(true);
@@ -127,6 +181,40 @@ describe("ResolveResultSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("rejects unknown abstention reason", () => {
+    const result = ResolveResultSchema.safeParse({
+      resolved: false,
+      candidates: [],
+      explanation: "No match",
+      abstentionReason: "timeout",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects resolved confidence above 1", () => {
+    const result = ResolveResultSchema.safeParse({
+      resolved: true,
+      selectorHint: 'role=button[name="ok"]',
+      candidateIndex: 0,
+      confidence: 1.1,
+      scores: { semantic: 1, structural: 0.8, spatial: 0.7 },
+      explanation: "Matched",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects resolved score above 1", () => {
+    const result = ResolveResultSchema.safeParse({
+      resolved: true,
+      selectorHint: 'role=button[name="ok"]',
+      candidateIndex: 0,
+      confidence: 0.95,
+      scores: { semantic: 1.1, structural: 0.8, spatial: 0.7 },
+      explanation: "Matched",
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("CandidateResultSchema", () => {
@@ -136,10 +224,37 @@ describe("CandidateResultSchema", () => {
       selectorHint: 'role=button[name="ok"]',
       confidence: 0.9,
       scores: { semantic: 0.95, structural: 0.8, spatial: 0.7 },
+      explanation: "semantic exact (0.950), structural strong (0.800), spatial plausible (0.700)",
       role: "button",
       accessibleName: "ok",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects candidate confidence outside 0-1", () => {
+    const result = CandidateResultSchema.safeParse({
+      candidateIndex: 0,
+      selectorHint: 'role=button[name="ok"]',
+      confidence: -0.1,
+      scores: { semantic: 0.95, structural: 0.8, spatial: 0.7 },
+      explanation: "semantic exact (0.950), structural strong (0.800), spatial plausible (0.700)",
+      role: "button",
+      accessibleName: "ok",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects candidate scores outside 0-1", () => {
+    const result = CandidateResultSchema.safeParse({
+      candidateIndex: 0,
+      selectorHint: 'role=button[name="ok"]',
+      confidence: 0.9,
+      scores: { semantic: 0.95, structural: 0.8, spatial: -0.1 },
+      explanation: "semantic exact (0.950), structural strong (0.800), spatial plausible (0.700)",
+      role: "button",
+      accessibleName: "ok",
+    });
+    expect(result.success).toBe(false);
   });
 });
 

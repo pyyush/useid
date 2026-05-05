@@ -84,21 +84,31 @@ export const USEIDSignatureSchema = z.object({
   spatial: USEIDSpatialSchema,
   /** Stability metadata */
   stability: USEIDStabilitySchema,
-  /** SHA-256 of canonical (origin + pagePath + semantic core) */
+  /** SHA-256 fingerprint of the captured identity context */
   hash: z.string(),
 });
 export type USEIDSignature = z.infer<typeof USEIDSignatureSchema>;
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
-export const MatchWeightsSchema = z.object({
-  /** Weight for semantic similarity (default: 0.5) */
-  semantic: z.number().min(0).max(1),
-  /** Weight for structural similarity (default: 0.3) */
-  structural: z.number().min(0).max(1),
-  /** Weight for spatial similarity (default: 0.2) */
-  spatial: z.number().min(0).max(1),
-});
+const SCORE_SCHEMA = z.number().min(0).max(1);
+const WEIGHT_SUM_EPSILON = 1e-9;
+
+export const MatchWeightsSchema = z
+  .object({
+    /** Weight for semantic similarity (default: 0.5) */
+    semantic: SCORE_SCHEMA,
+    /** Weight for structural similarity (default: 0.3) */
+    structural: SCORE_SCHEMA,
+    /** Weight for spatial similarity (default: 0.2) */
+    spatial: SCORE_SCHEMA,
+  })
+  .refine(
+    (weights) =>
+      Math.abs(weights.semantic + weights.structural + weights.spatial - 1) <
+      WEIGHT_SUM_EPSILON,
+    { message: "Match weights must sum to 1" }
+  );
 export type MatchWeights = z.infer<typeof MatchWeightsSchema>;
 
 export const USEIDConfigSchema = z.object({
@@ -121,32 +131,57 @@ export type USEIDConfig = z.infer<typeof USEIDConfigSchema>;
 
 // ── Resolve results ────────────────────────────────────────────────────────
 
+export const USEIDAbstentionReasonSchema = z.enum([
+  "binding_mismatch",
+  "no_candidates",
+  "below_threshold",
+  "ambiguous_match",
+]);
+export type USEIDAbstentionReason = z.infer<typeof USEIDAbstentionReasonSchema>;
+
+export const CandidateScoresSchema = z.object({
+  semantic: SCORE_SCHEMA,
+  structural: SCORE_SCHEMA,
+  spatial: SCORE_SCHEMA,
+});
+export type CandidateScores = z.infer<typeof CandidateScoresSchema>;
+
 export const CandidateResultSchema = z.object({
   /** Index in the normalized element list */
   candidateIndex: z.number(),
   /** Selector hint for consumers to locate the element */
   selectorHint: z.string(),
   /** Overall confidence score (0-1) */
-  confidence: z.number(),
+  confidence: SCORE_SCHEMA,
   /** Per-dimension scores */
-  scores: z.object({
-    semantic: z.number(),
-    structural: z.number(),
-    spatial: z.number(),
-  }),
+  scores: CandidateScoresSchema,
+  /** Human-readable rationale for why this candidate scored as it did */
+  explanation: z.string(),
   /** Role of the candidate element */
   role: z.string(),
   /** Accessible name of the candidate element */
   accessibleName: z.string(),
 });
-export type CandidateResult = z.infer<typeof CandidateResultSchema>;
+export interface CandidateResult {
+  candidateIndex: number;
+  selectorHint: string;
+  confidence: number;
+  scores: CandidateScores;
+  explanation: string;
+  role: string;
+  accessibleName: string;
+}
 
 export const ResolveResultSchema = z.discriminatedUnion("resolved", [
   z.object({
     resolved: z.literal(true),
     selectorHint: z.string(),
     candidateIndex: z.number(),
-    confidence: z.number(),
+    confidence: SCORE_SCHEMA,
+    /** Per-dimension scores for the winning candidate */
+    scores: CandidateScoresSchema,
+    /** Confidence gap between winner and runner-up when available */
+    scoreGap: SCORE_SCHEMA.optional(),
     explanation: z.string(),
     framePath: z.array(FramePathEntrySchema).optional(),
   }),
@@ -154,10 +189,28 @@ export const ResolveResultSchema = z.discriminatedUnion("resolved", [
     resolved: z.literal(false),
     candidates: z.array(CandidateResultSchema),
     explanation: z.string(),
-    abstentionReason: z.string(),
+    abstentionReason: USEIDAbstentionReasonSchema,
   }),
 ]);
-export type ResolveResult = z.infer<typeof ResolveResultSchema>;
+export interface ResolveSuccess {
+  resolved: true;
+  selectorHint: string;
+  candidateIndex: number;
+  confidence: number;
+  scores: CandidateScores;
+  scoreGap?: number;
+  explanation: string;
+  framePath?: FramePathEntry[];
+}
+
+export interface ResolveFailure {
+  resolved: false;
+  candidates: CandidateResult[];
+  explanation: string;
+  abstentionReason: USEIDAbstentionReason;
+}
+
+export type ResolveResult = ResolveSuccess | ResolveFailure;
 
 // ── Normalized element (internal) ──────────────────────────────────────────
 

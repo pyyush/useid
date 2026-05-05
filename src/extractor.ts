@@ -10,7 +10,12 @@
 
 import type { DOMSnapshotResult, AccessibilitySnapshotResult } from "./snapshot-types.js";
 import type { NormalizedElement, SemanticRegion } from "./types.js";
-import { normalizeAccessibleName, normalizeRole, normalizeTag } from "./canonicalizer.js";
+import {
+  nameSimilarity,
+  normalizeAccessibleName,
+  normalizeRole,
+  normalizeTag,
+} from "./canonicalizer.js";
 import {
   LANDMARK_ROLE_MAP,
   MAX_ANCESTOR_LEVELS,
@@ -61,6 +66,11 @@ interface FlatAXElement {
   childIndex: number;
 }
 
+interface NormalizedSiblingName {
+  node: AXNode;
+  name: string;
+}
+
 // ── Public API ──────────────────────────────────────────────────────────────
 
 export interface ExtractOptions {
@@ -89,6 +99,7 @@ export function extractElements(
 
   // Parse DOM snapshot for layout and structural data
   const domStructure = extractDOMStructure(domSnapshot.snapshot as CDPDOMSnapshot | null);
+  const domMatchIndex = buildDOMMatchIndex(domStructure);
 
   // Build normalized elements
   const elements: NormalizedElement[] = [];
@@ -104,7 +115,7 @@ export function extractElements(
     const normalizedName = normalizeAccessibleName(ax.name);
 
     // Find matching DOM node for spatial data
-    const domMatch = findDOMMatch(ax, domStructure);
+    const domMatch = findDOMMatch(ax, domMatchIndex);
     const bbox = domMatch?.bounds ?? { x: 0, y: 0, w: 0, h: 0 };
 
     // Determine semantic region from ancestor roles
@@ -156,13 +167,10 @@ function flattenAccessibilityTree(
     node: AXNode,
     depth: number,
     ancestorRoles: string[],
-    siblings: AXNode[],
+    siblingNameIndex: NormalizedSiblingName[],
     childIndex: number
   ) {
-    const siblingNames = siblings
-      .filter((s) => s !== node && s.name)
-      .map((s) => normalizeAccessibleName(s.name))
-      .slice(0, maxSiblings);
+    const siblingNames = collectSiblingNames(siblingNameIndex, node, maxSiblings);
 
     result.push({
       role: node.role,
@@ -176,14 +184,45 @@ function flattenAccessibilityTree(
 
     if (node.children) {
       const nextAncestors = [...ancestorRoles, normalizeRole(node.role)];
+      const childSiblingNameIndex = precomputeSiblingNames(node.children);
       for (let i = 0; i < node.children.length; i++) {
-        walk(node.children[i]!, depth + 1, nextAncestors, node.children, i);
+        walk(node.children[i]!, depth + 1, nextAncestors, childSiblingNameIndex, i);
       }
     }
   }
 
   walk(root, 0, [], [], 0);
   return result;
+}
+
+function precomputeSiblingNames(siblings: AXNode[]): NormalizedSiblingName[] {
+  const names: NormalizedSiblingName[] = [];
+
+  for (let i = 0; i < siblings.length; i++) {
+    const sibling = siblings[i];
+    if (!sibling?.name) continue;
+    names.push({ node: sibling, name: normalizeAccessibleName(sibling.name) });
+  }
+
+  return names;
+}
+
+function collectSiblingNames(
+  siblingNames: NormalizedSiblingName[],
+  node: AXNode,
+  maxSiblings: number
+): string[] {
+  if (maxSiblings <= 0) return [];
+
+  const names: string[] = [];
+
+  for (const sibling of siblingNames) {
+    if (sibling.node === node) continue;
+    names.push(sibling.name);
+    if (names.length >= maxSiblings) break;
+  }
+
+  return names;
 }
 
 // ── DOM snapshot parsing ────────────────────────────────────────────────────
@@ -196,6 +235,12 @@ interface DOMNodeInfo {
   bounds?: { x: number; y: number; w: number; h: number };
   ancestorTags: string[];
   labelText?: string;
+  textContent?: string;
+}
+
+interface DOMMatchIndex {
+  byTag: Map<string, DOMNodeInfo[]>;
+  byTagAndName: Map<string, DOMNodeInfo[]>;
 }
 
 function extractDOMStructure(snapshot: CDPDOMSnapshot | null): DOMNodeInfo[] {
@@ -208,6 +253,7 @@ function extractDOMStructure(snapshot: CDPDOMSnapshot | null): DOMNodeInfo[] {
 
   const result: DOMNodeInfo[] = [];
   const layoutMap = extractLayoutMapFromDoc(doc);
+  const childrenMap = buildChildrenMap(nodes.parentIndex ?? []);
 
   for (let i = 0; i < nodeCount; i++) {
     // Only process element nodes (nodeType 1)
@@ -235,7 +281,8 @@ function extractDOMStructure(snapshot: CDPDOMSnapshot | null): DOMNodeInfo[] {
     const bounds = layoutMap.get(i);
 
     // Check for associated label (simplified: look for <label> parent or sibling)
-    const labelText = findLabelForNode(i, nodes, strings, nodeCount);
+    const labelText = findLabelForNode(i, nodes, strings, childrenMap);
+    const textContent = extractNodeText(i, nodes, strings, childrenMap);
 
     result.push({
       index: i,
@@ -245,6 +292,7 @@ function extractDOMStructure(snapshot: CDPDOMSnapshot | null): DOMNodeInfo[] {
       bounds,
       ancestorTags,
       labelText,
+      textContent,
     });
   }
 
@@ -270,30 +318,104 @@ function extractLayoutMapFromDoc(
 
 // ── DOM-a11y matching ───────────────────────────────────────────────────────
 
+function buildDOMMatchIndex(domNodes: DOMNodeInfo[]): DOMMatchIndex {
+  const byTag = new Map<string, DOMNodeInfo[]>();
+  const byTagAndName = new Map<string, DOMNodeInfo[]>();
+
+  for (const node of domNodes) {
+    pushMapValue(byTag, node.tagName, node);
+
+    for (const name of getDOMNameKeys(node)) {
+      pushMapValue(byTagAndName, makeTagNameKey(node.tagName, name), node);
+    }
+  }
+
+  return { byTag, byTagAndName };
+}
+
 function findDOMMatch(
   ax: FlatAXElement,
-  domNodes: DOMNodeInfo[],
+  domIndex: DOMMatchIndex,
 ): DOMNodeInfo | undefined {
-  if (domNodes.length === 0) return undefined;
-
   const targetTag = roleToTag(normalizeRole(ax.role));
   if (!targetTag) return undefined;
 
   // Find DOM nodes matching the expected tag
-  const candidates = domNodes.filter((n) => n.tagName === targetTag);
+  const candidates = domIndex.byTag.get(targetTag) ?? [];
   if (candidates.length === 0) return undefined;
 
-  // If only one candidate, use it
-  if (candidates.length === 1) return candidates[0];
+  const expectedName = normalizeAccessibleName(ax.name);
+  const exactNameMatches = domIndex.byTagAndName.get(makeTagNameKey(targetTag, expectedName));
+  if (exactNameMatches?.length === 1) return exactNameMatches[0];
+  if (exactNameMatches && exactNameMatches.length > 1) return undefined;
 
-  // Multiple candidates: prefer one at similar depth
-  const bestByDepth = candidates.reduce((best, c) => {
-    const depthDiff = Math.abs(c.ancestorTags.length - ax.depth);
-    const bestDiff = Math.abs((best?.ancestorTags.length ?? Infinity) - ax.depth);
-    return depthDiff < bestDiff ? c : best;
-  }, candidates[0]);
+  if (!expectedName) return candidates.length === 1 ? candidates[0] : undefined;
 
-  return bestByDepth;
+  // If only one candidate has conflicting text evidence, do not borrow its geometry.
+  if (candidates.length === 1) {
+    const onlyCandidate = candidates[0]!;
+    if (hasNameEvidence(onlyCandidate) && computeDOMNameScore(expectedName, onlyCandidate) === 0) {
+      return undefined;
+    }
+    return onlyCandidate;
+  }
+
+  const rankedCandidates = candidates.map((candidate) => {
+    const nameScore = computeDOMNameScore(expectedName, candidate);
+      const depthScore = 1 / (1 + Math.abs(candidate.ancestorTags.length - ax.depth));
+    const totalScore = nameScore * 2 + depthScore;
+
+    return { candidate, nameScore, totalScore };
+  });
+
+  rankedCandidates.sort((a, b) => b.totalScore - a.totalScore);
+
+  const best = rankedCandidates[0];
+  if (!best || best.nameScore === 0) return undefined;
+
+  const runnerUp = rankedCandidates[1];
+  if (
+    runnerUp &&
+    runnerUp.nameScore === best.nameScore &&
+    Math.abs(runnerUp.totalScore - best.totalScore) < 0.0001
+  ) {
+    return undefined;
+  }
+
+  return best.candidate;
+}
+
+function computeDOMNameScore(expectedName: string, candidate: DOMNodeInfo): number {
+  return Math.max(
+    nameSimilarity(expectedName, candidate.textContent ?? ""),
+    nameSimilarity(expectedName, candidate.labelText ?? "")
+  );
+}
+
+function hasNameEvidence(candidate: DOMNodeInfo): boolean {
+  return Boolean(candidate.textContent || candidate.labelText);
+}
+
+function getDOMNameKeys(candidate: DOMNodeInfo): string[] {
+  const names = new Set<string>();
+  for (const value of [candidate.textContent, candidate.labelText]) {
+    const normalized = normalizeAccessibleName(value ?? "");
+    if (normalized) names.add(normalized);
+  }
+  return [...names];
+}
+
+function makeTagNameKey(tagName: string, name: string): string {
+  return `${tagName}\0${name}`;
+}
+
+function pushMapValue<K, V>(map: Map<K, V[]>, key: K, value: V): void {
+  const existing = map.get(key);
+  if (existing) {
+    existing.push(value);
+    return;
+  }
+  map.set(key, [value]);
 }
 
 // ── Utility functions ───────────────────────────────────────────────────────
@@ -371,23 +493,62 @@ function findLabelForNode(
   nodeIndex: number,
   nodes: CDPDOMSnapshotDocument["nodes"],
   strings: string[],
-  nodeCount: number
+  childrenMap: Map<number, number[]>
 ): string | undefined {
   // Check if parent is a <label>
   const parentIdx = nodes.parentIndex[nodeIndex] ?? -1;
-  if (parentIdx >= 0 && parentIdx < nodeCount) {
+  if (parentIdx >= 0) {
     const parentNameIdx = nodes.nodeName[parentIdx] ?? 0;
     const parentTag = (strings[parentNameIdx] ?? "").toLowerCase();
     if (parentTag === "label") {
-      // Look for text content in label's children
-      for (let i = 0; i < nodeCount; i++) {
-        if (nodes.parentIndex[i] === parentIdx && nodes.nodeType[i] === 3) {
-          const textIdx = nodes.nodeValue[i] ?? 0;
-          const text = strings[textIdx] ?? "";
-          if (text.trim()) return normalizeAccessibleName(text);
-        }
-      }
+      const labelText = extractNodeText(parentIdx, nodes, strings, childrenMap);
+      if (labelText) return labelText;
     }
   }
   return undefined;
+}
+
+function buildChildrenMap(parentIndex: number[]): Map<number, number[]> {
+  const map = new Map<number, number[]>();
+
+  for (let i = 0; i < parentIndex.length; i++) {
+    const parent = parentIndex[i] ?? -1;
+    if (!map.has(parent)) {
+      map.set(parent, []);
+    }
+    map.get(parent)!.push(i);
+  }
+
+  return map;
+}
+
+function extractNodeText(
+  nodeIndex: number,
+  nodes: CDPDOMSnapshotDocument["nodes"],
+  strings: string[],
+  childrenMap: Map<number, number[]>
+): string | undefined {
+  const childIndexes = childrenMap.get(nodeIndex) ?? [];
+  const textParts: string[] = [];
+
+  const walk = (currentIndex: number) => {
+    if (nodes.nodeType[currentIndex] === 3) {
+      const textIdx = nodes.nodeValue[currentIndex] ?? 0;
+      const text = strings[textIdx] ?? "";
+      if (text.trim()) {
+        textParts.push(text);
+      }
+    }
+
+    for (const childIndex of childrenMap.get(currentIndex) ?? []) {
+      walk(childIndex);
+    }
+  };
+
+  for (const childIndex of childIndexes) {
+    walk(childIndex);
+  }
+
+  const text = normalizeAccessibleName(textParts.join(" "));
+  return text || undefined;
 }

@@ -1,5 +1,5 @@
 // uSEID — Universal Semantic Element ID
-// Stable cross-run element identity via ARIA semantics + DOM structure + visual anchoring
+// Portable grounding and safe resolution via ARIA semantics + DOM structure + visual anchoring
 
 // Snapshot input types
 export type { DOMSnapshotResult, AccessibilitySnapshotResult } from "./snapshot-types.js";
@@ -15,6 +15,8 @@ export {
   type USEIDSignature,
   type MatchWeights,
   type USEIDConfig,
+  type CandidateScores,
+  type USEIDAbstentionReason,
   type CandidateResult,
   type ResolveResult,
   type NormalizedElement,
@@ -28,6 +30,8 @@ export {
   USEIDSignatureSchema,
   MatchWeightsSchema,
   USEIDConfigSchema,
+  CandidateScoresSchema,
+  USEIDAbstentionReasonSchema,
   CandidateResultSchema,
   ResolveResultSchema,
   BoundingBoxSchema,

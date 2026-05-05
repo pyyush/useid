@@ -1,6 +1,6 @@
 {
   "name": "@pyyush/useid",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
   "description": "uSEID - Universal Semantic Element ID for stable cross-run element identity",
   "author": "Piyush Vyas",
   "license": "Apache-2.0",
@@ -23,6 +23,8 @@
   },
   "files": [
     "dist",
+    "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "repository": {
@@ -32,8 +34,11 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/__tests__/performance-budget.test.ts",
+    "test:perf": "vitest run --no-file-parallelism --maxWorkers=1 src/__tests__/performance-budget.test.ts",
     "test:watch": "vitest",
+    "release:verify": "node scripts/check-release-policy.mjs && npm run build && npm run typecheck && npm test && npm run test:perf && npm audit --json && npm pack --dry-run >/dev/null",
+    "prepublishOnly": "npm run build",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -62,6 +67,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "^20.0.0 || ^22.0.0"
   }
 }
