@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.0-rc.2] - 2026-05-05
+
+`@pyyush/useid@1.0.0-rc.2` republishes the RC after PR review fixes landed on `main`: release-policy checks now run in the tag workflow before publish, shipped docs describe the RC support matrix honestly, and the extraction performance gate was stabilized for Node 20/22.
+
+### Fixed
+
+- Enforced release policy in both verify and publish workflow phases.
+- Stabilized extractor hot-path performance checks used by `release:verify`.
+- Narrowed runtime support to the tested Node 20/22 matrix.
+
 ## [1.0.0-rc.1] - 2026-05-04
 
 `@pyyush/useid@1.0.0-rc.1` is published on npm under the `rc` dist-tag. The npm `latest` dist-tag remains `0.1.0` as of May 5, 2026, so install this release candidate with `npm install @pyyush/useid@rc`.
