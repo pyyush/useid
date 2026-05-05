@@ -17,16 +17,15 @@ Target release: `1.0.0`.
 Semver justification:
 
 - npm latest verified during this phase: `@pyyush/useid@0.1.0`.
-- Local audit baseline after release-hardening checkpoint: `package.json` and `package-lock.json` are intentionally aligned at `0.2.0`, unpublished as latest.
+- Local audit baseline after the release-hardening checkpoint was `0.2.0`; the current release branch is aligned at `1.0.0-rc.1`.
 - The mission is a stable, secure, valuable major release, and the audit identifies public API decisions that should be finalized before a stable contract.
 - Pre-1.0 changes may break or tighten API semantics. Once result schemas, abstention reasons, config behavior, support claims, and release distribution are stable, the correct semver target is `1.0.0`.
 
-If the orchestrator elects an interim publish before stable-major, use `0.2.0` or a later `0.x` version. This plan is for the stable major release.
+The first RC is published as `1.0.0-rc.1` under the npm `rc` dist-tag. This plan still targets the final stable major release.
 
-Pre-RC version policy:
+RC version policy:
 
-- Keep local package metadata at `0.2.0` until a release owner creates the RC version-bump commit.
-- For the first RC, bump `package.json` and `package-lock.json` together to `1.0.0-rc.1`, commit that change, and tag the same commit as `v1.0.0-rc.1`.
+- The first RC bump set `package.json` and `package-lock.json` together to `1.0.0-rc.1`, committed that change, and tagged the same commit as `v1.0.0-rc.1`.
 - Later RCs use `1.0.0-rc.2`, `1.0.0-rc.3`, and so on.
 - The release workflow rejects any tag/package mismatch, accepts only stable `x.y.z` or RC `x.y.z-rc.N` versions, publishes RCs under the npm `rc` dist-tag, and marks RC GitHub releases as prereleases.
 - Final stable release uses `1.0.0`, tag `v1.0.0`, npm dist-tag `latest`, and a non-prerelease GitHub release.
@@ -458,11 +457,13 @@ Total estimate: 15 cycles.
 
 **Current RC gate status:**
 
-- Local release verification gate: latest full `npm run release:verify` passed on 2026-05-04.
+- Local release verification gate: latest full `npm run release:verify` passed on 2026-05-05 after PR #3 remediation.
 - Timing note: the first `npm run release:verify` attempt failed in the focused performance-budget step because 600-element extraction took about 2531 ms against the 2000 ms budget. A focused rerun of `npm test -- src/__tests__/performance-budget.test.ts` passed, and a second full `npm run release:verify` passed. Treat the extraction budget as timing-sensitive evidence to watch in CI/RC.
 - Public npm latest: registry reports `@pyyush/useid@0.1.0` under the `latest` dist-tag.
 - Public npm RC: registry reports `@pyyush/useid@1.0.0-rc.1` under the `rc` dist-tag.
 - Local package: current release branch package metadata is `@pyyush/useid@1.0.0-rc.1`.
+- PR #3 review remediation: release workflow policy checks now run in the `verify` job and again immediately before `npm publish`; the local policy script asserts both placements.
+- PR #3 review remediation: packaged README/CHANGELOG describe `1.0.0-rc.1` as the current RC and narrow runtime support to the Node 20/22 tested matrix.
 - Stable release target in this plan: `1.0.0`; it is not published.
 - Version alignment policy: RC commits set `package.json` and `package-lock.json` to `1.0.0-rc.N`; the final release commit sets both to `1.0.0`. The release workflow requires the tag version to exactly match package metadata.
 - RC naming policy: use npm SemVer `1.0.0-rc.N` and Git tag `v1.0.0-rc.N`. RC publishes use npm dist-tag `rc` and GitHub prereleases; stable publishes use npm dist-tag `latest` and normal GitHub releases.
@@ -499,18 +500,18 @@ Total estimate: 15 cycles.
 
 **Local verification:**
 
-- `npm run release:verify`: first attempt failed on focused performance extraction budget; second full attempt passed.
-- `npm test -- src/__tests__/performance-budget.test.ts`: passed on focused rerun, 1 test file and 3 tests.
-- `npm audit --json`: passed with 0 vulnerabilities.
-- `npm pack --dry-run --json`: passed for `@pyyush/useid@0.2.0`, package size 36,995 bytes, unpacked size 156,548 bytes, 8 files.
-- Package internal-file assertion from dry-run JSON: passed with an empty forbidden-file list.
+- `npm run release:verify`: passed on 2026-05-05 after PR #3 remediation; included release policy, build, typecheck, full Vitest, focused performance budgets, `npm audit --json`, and `npm pack --dry-run`.
+- `npm test`: passed, 9 test files and 152 tests.
+- `npm audit`: passed with 0 vulnerabilities.
+- `npm pack --dry-run`: passed for `@pyyush/useid@1.0.0-rc.1`, package size 37.2 kB, unpacked size 157.1 kB, 8 files.
+- Package internal-file assertion from the `release:verify` dry-run JSON: passed with an empty forbidden-file list.
 - `npm view @pyyush/useid version --json`: `0.1.0`.
 - `npm view @pyyush/useid dist-tags --json`: `{ "latest": "0.1.0", "rc": "1.0.0-rc.1" }`.
 - `npm view @pyyush/useid@1.0.0-rc.1 dist.tarball dist.integrity dist.shasum --json`: tarball `https://registry.npmjs.org/@pyyush/useid/-/useid-1.0.0-rc.1.tgz`, integrity `sha512-G8wvm6PIQlIH0rvhLJNC43pRiGfsKQHiTqyC73YKnhzzlKaZ0aA6ewZDeF73Asds1la7t9s4HgKinBwcfVhxuA==`, shasum `e35a3a16386110137f8e116435be9bf9858636c9`.
 - Release workflow `v1.0.0-rc.1`: passed at `https://github.com/pyyush/useid/actions/runs/25339009937`.
 - GitHub prerelease: `https://github.com/pyyush/useid/releases/tag/v1.0.0-rc.1`.
 - Local package metadata inspection: `@pyyush/useid@1.0.0-rc.1`, `publishConfig.access` is `public`, registry is `https://registry.npmjs.org/`.
-- Pre-RC policy check: local `release:verify` now asserts package/package-lock name/version alignment and release-workflow prerelease policy before running build, tests, audit, and pack dry-run.
+- Release policy check: local `release:verify` now asserts package/package-lock name/version alignment, release-workflow prerelease policy, and policy-script placement in both `verify` and immediately before `npm publish`.
 
 **Exit criteria:**
 
@@ -550,8 +551,7 @@ Total estimate: 15 cycles.
 
 Current blockers for release:
 
-- Public npm latest is `0.1.0`, while local package metadata is intentionally `0.2.0` and the stable target remains `1.0.0`; no RC artifact/tag/package has been created.
-- An RC version-bump commit is still required: update `package.json` and `package-lock.json` to `1.0.0-rc.N`, commit them, and tag the same commit as `v1.0.0-rc.N`.
+- Public npm latest is `0.1.0`, while the published RC is `1.0.0-rc.1` and the stable target remains `1.0.0`.
 - At least one external or external-like RC user still needs to validate the package/docs/example.
 - Performance-budget timing was sensitive during local RC prep: one focused extraction-budget run failed before subsequent focused and full-gate reruns passed.
 
@@ -592,7 +592,7 @@ Current baseline:
 - Build: tsup.
 - Typecheck: TypeScript `tsc --noEmit`.
 - Tests: Vitest in Node environment.
-- Runtime engine: Node `>=20.0.0`.
+- Runtime engine: Node `^20.0.0 || ^22.0.0`.
 - CI matrix: Node `20` and `22`.
 - No explicit browser execution matrix exists in CI today.
 
@@ -612,7 +612,7 @@ Decision:
 
 ### Implementation Gate
 
-Status: Local preparation evidence exists from Tasks 2-10, with the latest `npm run release:verify` passing. CI confirmation is still required before RC.
+Status: Local preparation evidence exists from Tasks 2-10, with the latest `npm run release:verify` passing after PR #3 remediation. CI confirmation is still required for follow-up release changes.
 
 Required evidence:
 
@@ -662,8 +662,8 @@ Required evidence:
 
 Remaining release delta after Task 10 local preparation:
 
-- RC artifact evidence from a clean release branch after the `1.0.0-rc.N` version-bump commit.
-- External or external-like user validation evidence.
+- External or external-like validation against `1.0.0-rc.1`.
+- Follow-up RC only if release-blocking feedback requires one.
 - Final publish/release evidence after the RC and external-user gates pass.
 
 ## Phase 3 Starting Point

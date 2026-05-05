@@ -1,8 +1,14 @@
 # Changelog
 
-## [Unreleased] - 1.0.0 target
+## [1.0.0-rc.1] - 2026-05-04
 
-`1.0.0` is the planned stable release target and is not published yet. The latest npm-published version is still `0.1.0`; the local package baseline in this branch is `0.2.0`.
+`@pyyush/useid@1.0.0-rc.1` is published on npm under the `rc` dist-tag. The npm `latest` dist-tag remains `0.1.0` as of May 5, 2026, so install this release candidate with `npm install @pyyush/useid@rc`.
+
+### Runtime support
+
+- The supported and tested runtime matrix for this RC is Node.js 20 and 22.
+- The package `engines.node` claim is intentionally narrowed to `^20.0.0 || ^22.0.0` until extraction budget evidence covers newer Node versions.
+- CI and release verification run the same Node 20/22 matrix.
 
 ### Migration notes from published 0.1.0
 
@@ -25,13 +31,13 @@
 
 - Added docs for the snapshot boundary a browser harness must provide: current URL, DOM snapshot, accessibility snapshot, and optional frame path.
 - Added a grounding-gate example that resolves before click/fill-style actions and records confidence, score gap, abstention reason, and score bands without raw candidate names.
-- Clarified that README examples target the current branch or future release artifact, not the npm `latest` package while `latest` remains `0.1.0`.
+- Clarified that README examples target the `1.0.0-rc.1` API, not the npm `latest` package while `latest` remains `0.1.0`.
 - Documented the current fixed `1024x768` spatial normalization limit so browser-harness adopters do not mistake it for a browser viewport matrix.
 - Confirmed the release scope is `learn-from` only: no browser-harness dependency, backend, runtime bridge, or required browser runtime.
 
 ## [0.2.0] - 2026-04-02
 
-Local release baseline for the current branch. This version is not the npm `latest` at the time of the 1.0.0 planning work.
+Pre-RC local release baseline used during 1.0 planning. This version was not the npm `latest` at the time of the planning work and is superseded by `1.0.0-rc.1`.
 
 ### Added
 

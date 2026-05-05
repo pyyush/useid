@@ -56,4 +56,21 @@ if (!releaseWorkflow.includes("github_prerelease")) {
   fail("release.yml must mark RC GitHub releases as prereleases");
 }
 
+const policyCheckCount = releaseWorkflow.match(/node scripts\/check-release-policy\.mjs/g)
+  ?.length ?? 0;
+
+if (policyCheckCount < 2) {
+  fail(
+    "release.yml must run scripts/check-release-policy.mjs in verify and immediately before npm publish",
+  );
+}
+
+if (
+  !/node scripts\/check-release-policy\.mjs\s*\n\s*-\s*run:\s*npm publish --access public --provenance --tag/.test(
+    releaseWorkflow,
+  )
+) {
+  fail("release.yml must run scripts/check-release-policy.mjs immediately before npm publish");
+}
+
 console.log(`Release policy check passed for ${packageJson.name}@${version}.`);

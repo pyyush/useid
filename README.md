@@ -6,7 +6,7 @@
   <a href="https://www.npmjs.com/package/@pyyush/useid"><img src="https://img.shields.io/npm/v/@pyyush/useid?color=111&label=npm" alt="npm version" /></a>
   <a href="https://github.com/pyyush/useid/actions/workflows/ci.yml"><img src="https://github.com/pyyush/useid/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-111" alt="License" /></a>
-  <img src="https://img.shields.io/badge/node-%3E%3D20-111" alt="Node >= 20" />
+  <img src="https://img.shields.io/badge/node-20%20%7C%2022-111" alt="Node 20 and 22" />
 </p>
 
 **uSEID is the grounding gate for browser agents: resolve when the target is justified, abstain when it is not.**
@@ -49,17 +49,17 @@ The signature hash is a **capture fingerprint**, not a promise of permanent iden
 npm install @pyyush/useid
 ```
 
-Zero config. One dependency (zod). Works with any Node.js 20+ project.
+Zero config. One dependency (zod). The `1.0.0-rc.1` package is tested and supported on Node.js 20 and 22, matching CI and release verification.
 
 ## Release Status
 
-The npm latest version is verified as `0.1.0` as of May 4, 2026. This branch is preparing the local `0.2.0` baseline on the path to a stable `1.0.0` release; `1.0.0` is not published yet. The examples below describe the current branch API and the intended stable contract unless the changelog says otherwise. Until a newer package is published, use this repository branch or a dry-run package artifact to try these examples.
+The npm `latest` dist-tag is verified as `0.1.0` and the npm `rc` dist-tag is verified as `1.0.0-rc.1` as of May 5, 2026. Install the release candidate with `npm install @pyyush/useid@rc`. The examples below describe the `1.0.0-rc.1` API and intended stable contract unless the changelog says otherwise.
 
-For a first working check in under five minutes against this branch: capture one DOM snapshot plus one accessibility snapshot from your browser tool, choose the intended element from `extractElements()`, call `buildUSEID()`, then call `resolveUSEID()` before taking the browser action.
+For a first working check in under five minutes with the RC: capture one DOM snapshot plus one accessibility snapshot from your browser tool, choose the intended element from `extractElements()`, call `buildUSEID()`, then call `resolveUSEID()` before taking the browser action.
 
-## Migration Notes For The 1.0.0 Target
+## Migration Notes For The 1.0.0 RC
 
-If you are moving from the published `0.1.0` package toward the planned `1.0.0` contract:
+If you are moving from the published `0.1.0` package toward the `1.0.0-rc.1` contract:
 
 - Branch on `result.resolved` before reading success or failure fields.
 - Handle all stable abstention reasons: `binding_mismatch`, `no_candidates`, `below_threshold`, and `ambiguous_match`.
@@ -267,10 +267,11 @@ Use this mapping when a browser-harness-style agent wants safe grounding:
 
 See `examples/grounding-gate.ts` for a browser-harness-facing example that resolves a target only after the uSEID confidence and abstention gate passes.
 
-## What Works Today (current branch `0.2.0` baseline)
+## What Works Today (`1.0.0-rc.1`)
 
 | | Supported | Behavior |
 |-|-----------|----------|
+| Node.js runtime | 20 and 22 | Tested CI/release matrix; package engines intentionally do not claim Node 24+ until extraction budget evidence is added |
 | Chromium | Yes | Full CDP snapshot support |
 | Main frame | Yes | Default |
 | Same-origin iframes | Yes | When the caller captures the iframe snapshots and passes the correct `framePath` |
@@ -288,6 +289,7 @@ Expect abstentions, not heroics, when:
 - the caller provides incomplete or mismatched frame bindings
 - DOM and accessibility snapshots disagree too much to ground safely
 - the host surface falls outside the current Chromium + CDP snapshot model
+- the runtime falls outside the Node 20/22 tested support matrix for this RC
 
 ## Full API
 
