@@ -66,6 +66,11 @@ interface FlatAXElement {
   childIndex: number;
 }
 
+interface NormalizedSiblingName {
+  node: AXNode;
+  name: string;
+}
+
 // ── Public API ──────────────────────────────────────────────────────────────
 
 export interface ExtractOptions {
@@ -162,13 +167,10 @@ function flattenAccessibilityTree(
     node: AXNode,
     depth: number,
     ancestorRoles: string[],
-    siblings: AXNode[],
+    siblingNameIndex: NormalizedSiblingName[],
     childIndex: number
   ) {
-    const siblingNames = siblings
-      .filter((s) => s !== node && s.name)
-      .map((s) => normalizeAccessibleName(s.name))
-      .slice(0, maxSiblings);
+    const siblingNames = collectSiblingNames(siblingNameIndex, node, maxSiblings);
 
     result.push({
       role: node.role,
@@ -182,14 +184,45 @@ function flattenAccessibilityTree(
 
     if (node.children) {
       const nextAncestors = [...ancestorRoles, normalizeRole(node.role)];
+      const childSiblingNameIndex = precomputeSiblingNames(node.children);
       for (let i = 0; i < node.children.length; i++) {
-        walk(node.children[i]!, depth + 1, nextAncestors, node.children, i);
+        walk(node.children[i]!, depth + 1, nextAncestors, childSiblingNameIndex, i);
       }
     }
   }
 
   walk(root, 0, [], [], 0);
   return result;
+}
+
+function precomputeSiblingNames(siblings: AXNode[]): NormalizedSiblingName[] {
+  const names: NormalizedSiblingName[] = [];
+
+  for (let i = 0; i < siblings.length; i++) {
+    const sibling = siblings[i];
+    if (!sibling?.name) continue;
+    names.push({ node: sibling, name: normalizeAccessibleName(sibling.name) });
+  }
+
+  return names;
+}
+
+function collectSiblingNames(
+  siblingNames: NormalizedSiblingName[],
+  node: AXNode,
+  maxSiblings: number
+): string[] {
+  if (maxSiblings <= 0) return [];
+
+  const names: string[] = [];
+
+  for (const sibling of siblingNames) {
+    if (sibling.node === node) continue;
+    names.push(sibling.name);
+    if (names.length >= maxSiblings) break;
+  }
+
+  return names;
 }
 
 // ── DOM snapshot parsing ────────────────────────────────────────────────────

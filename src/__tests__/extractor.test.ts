@@ -376,6 +376,29 @@ describe("extractElements", () => {
     expect(button!.ancestorRoles.length).toBeLessThanOrEqual(3);
   });
 
+  it("respects maxSiblingTokens option while preserving sibling order", () => {
+    const axTree = {
+      role: "WebArea",
+      name: "Page",
+      children: [
+        { role: "button", name: "Save" },
+        { role: "button", name: "Cancel" },
+        { role: "button", name: "Reset" },
+        { role: "button", name: "Delete" },
+      ],
+    };
+
+    const elements = extractElements(makeDOMSnapshot(null), makeAXSnapshot(axTree), {
+      maxSiblingTokens: 2,
+    });
+
+    const save = elements.find((e) => e.accessibleName === "save");
+    const cancel = elements.find((e) => e.accessibleName === "cancel");
+
+    expect(save!.siblingTokens).toEqual(["cancel", "reset"]);
+    expect(cancel!.siblingTokens).toEqual(["save", "reset"]);
+  });
+
   it("handles DOM snapshot with label association", () => {
     const domSnapshot = makeDOMSnapshot({
       documents: [

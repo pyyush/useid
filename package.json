@@ -34,9 +34,10 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/__tests__/performance-budget.test.ts",
+    "test:perf": "vitest run --no-file-parallelism --maxWorkers=1 src/__tests__/performance-budget.test.ts",
     "test:watch": "vitest",
-    "release:verify": "node scripts/check-release-policy.mjs && npm run build && npm run typecheck && npm test && npm test -- src/__tests__/performance-budget.test.ts && npm audit --json && npm pack --dry-run >/dev/null",
+    "release:verify": "node scripts/check-release-policy.mjs && npm run build && npm run typecheck && npm test && npm run test:perf && npm audit --json && npm pack --dry-run >/dev/null",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist"
   },

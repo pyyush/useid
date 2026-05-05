@@ -62,7 +62,7 @@ jobs:
       - name: Run Vitest suite
         run: npm test
       - name: Run performance budget tests
-        run: npm test -- src/__tests__/performance-budget.test.ts
+        run: npm run test:perf
       - name: Check npm audit clean state
         run: npm audit --json
       - name: Check package contents
