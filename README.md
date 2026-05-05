@@ -49,17 +49,17 @@ The signature hash is a **capture fingerprint**, not a promise of permanent iden
 npm install @pyyush/useid
 ```
 
-Zero config. One dependency (zod). The `1.0.0-rc.1` package is tested and supported on Node.js 20 and 22, matching CI and release verification.
+Zero config. One dependency (zod). The `1.0.0-rc.2` package is tested and supported on Node.js 20 and 22, matching CI and release verification.
 
 ## Release Status
 
-The npm `latest` dist-tag is verified as `0.1.0` and the npm `rc` dist-tag is verified as `1.0.0-rc.1` as of May 5, 2026. Install the release candidate with `npm install @pyyush/useid@rc`. The examples below describe the `1.0.0-rc.1` API and intended stable contract unless the changelog says otherwise.
+The npm `latest` dist-tag is verified as `0.1.0`; the current release-candidate target is `1.0.0-rc.2` as of May 5, 2026. Install the release candidate with `npm install @pyyush/useid@rc`. The examples below describe the `1.0.0-rc.2` API and intended stable contract unless the changelog says otherwise.
 
 For a first working check in under five minutes with the RC: capture one DOM snapshot plus one accessibility snapshot from your browser tool, choose the intended element from `extractElements()`, call `buildUSEID()`, then call `resolveUSEID()` before taking the browser action.
 
 ## Migration Notes For The 1.0.0 RC
 
-If you are moving from the published `0.1.0` package toward the `1.0.0-rc.1` contract:
+If you are moving from the published `0.1.0` package toward the `1.0.0-rc.2` contract:
 
 - Branch on `result.resolved` before reading success or failure fields.
 - Handle all stable abstention reasons: `binding_mismatch`, `no_candidates`, `below_threshold`, and `ambiguous_match`.
@@ -267,7 +267,7 @@ Use this mapping when a browser-harness-style agent wants safe grounding:
 
 See `examples/grounding-gate.ts` for a browser-harness-facing example that resolves a target only after the uSEID confidence and abstention gate passes.
 
-## What Works Today (`1.0.0-rc.1`)
+## What Works Today (`1.0.0-rc.2`)
 
 | | Supported | Behavior |
 |-|-----------|----------|

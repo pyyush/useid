@@ -1,6 +1,6 @@
 # uSEID RC Validation Handoff
 
-This handoff validates `@pyyush/useid@1.0.0-rc.1` before the stable `1.0.0` release. The RC exists on npm under the `rc` dist-tag and as a GitHub prerelease.
+This handoff validates `@pyyush/useid@1.0.0-rc.2` before the stable `1.0.0` release. The RC is intended to replace `1.0.0-rc.1` on npm's `rc` dist-tag and as the current GitHub prerelease.
 
 ## Version And RC Naming Policy
 
@@ -8,17 +8,17 @@ The repository package version was bumped to `1.0.0-rc.1` in the RC version-bump
 
 ## RC Artifact
 
-- RC version: `1.0.0-rc.1`
+- RC version: `1.0.0-rc.2`
 - npm dist-tag install: `npm install @pyyush/useid@rc`
-- explicit npm version install: `npm install @pyyush/useid@1.0.0-rc.1`
-- tarball URL: `https://registry.npmjs.org/@pyyush/useid/-/useid-1.0.0-rc.1.tgz`
+- explicit npm version install: `npm install @pyyush/useid@1.0.0-rc.2`
+- tarball URL: `https://registry.npmjs.org/@pyyush/useid/-/useid-1.0.0-rc.2.tgz`
 - npm integrity: `sha512-G8wvm6PIQlIH0rvhLJNC43pRiGfsKQHiTqyC73YKnhzzlKaZ0aA6ewZDeF73Asds1la7t9s4HgKinBwcfVhxuA==`
 - npm shasum: `e35a3a16386110137f8e116435be9bf9858636c9`
-- Git tag: `v1.0.0-rc.1`
-- GitHub prerelease: `https://github.com/pyyush/useid/releases/tag/v1.0.0-rc.1`
+- Git tag: `v1.0.0-rc.2`
+- GitHub prerelease: `https://github.com/pyyush/useid/releases/tag/v1.0.0-rc.2`
 - Release workflow: `https://github.com/pyyush/useid/actions/runs/25339009937`
 
-`latest` remains `0.1.0`; `rc` points at `1.0.0-rc.1`.
+`latest` remains `0.1.0`; `rc` should point at `1.0.0-rc.2` after the release workflow completes.
 
 ## Release Owner Evidence
 
